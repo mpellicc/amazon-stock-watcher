@@ -91,6 +91,19 @@ npm run test:telegram   # messaggio di prova con bottone "🛒 APRI SU AMAZON"
 npm run test:amazon     # un singolo check reale, stampa stato e segnali (aggiungi -- --headed per vedere il browser)
 ```
 
+### Interfaccia nel terminale
+
+Quando lo avvii da un terminale interattivo (`npm run dev`, `npm start`):
+
+- animazione di avvio (logo, checklist legata agli eventi reali, riepilogo della configurazione). Gira in parallelo all'avvio di Chromium e al primo check, quindi non aggiunge latenza. Si salta premendo un tasto qualsiasi e si disattiva con `STARTUP_ANIMATION=false`;
+- riga di stato in basso con prossimo check, stato, numero di check e uptime;
+- check identici consecutivi compattati in una sola riga (`×42 dalle 17:41:03`). Il file di log resta completo;
+- titolo della finestra o tab con lo stato (⚪ UNAVAILABLE, 🟢 AVAILABLE!, 🟣 BLOCKED…);
+- riquadro verde e campanello quando il prodotto diventa disponibile;
+- tasti: `c` check immediato (anche in BLOCKED, utile dopo aver risolto un CAPTCHA), `o` apre Amazon, `d` mostra o nasconde i dettagli del detector, `q` o Ctrl+C per uscire con il riepilogo della sessione.
+
+Con pm2, launchd, systemd o output rediretto su file la UI non si attiva: restano le righe di log semplici, senza colori né sequenze di controllo.
+
 Log a console e in `logs/watcher.log` (rotazione a 5 MB, 3 file). Esempio:
 
 ```

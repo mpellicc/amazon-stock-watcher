@@ -20,6 +20,7 @@ export interface Config {
   navigationTimeoutMs: number;
   blockedRetryIntervalMs: number;
   blockHeavyResources: boolean;
+  startupAnimation: boolean;
   logLevel: LogLevel;
   paths: { stateFile: string; logFile: string; browserProfileDir: string };
 }
@@ -96,6 +97,7 @@ export function loadConfig(options: { requireTelegram: boolean }, env: Env = pro
     navigationTimeoutMs: int("NAVIGATION_TIMEOUT_MS", 30_000, 5000),
     blockedRetryIntervalMs: int("BLOCKED_RETRY_INTERVAL_MS", 120_000, 10_000),
     blockHeavyResources: bool("BLOCK_HEAVY_RESOURCES", true),
+    startupAnimation: bool("STARTUP_ANIMATION", true),
     logLevel: logLevel as LogLevel,
     paths: {
       stateFile: "data/state.json",

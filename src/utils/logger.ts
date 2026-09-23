@@ -11,7 +11,7 @@ const MAX_ROTATED_FILES = 3;
 type Style = Parameters<typeof styleText>[0];
 
 // Colori solo in console; il file resta testo semplice.
-const STATE_STYLE: Record<string, Style> = {
+export const STATE_STYLE: Record<string, Style> = {
   AVAILABLE: ["bold", "green"],
   UNAVAILABLE: "gray",
   BLOCKED: ["bold", "magenta"],
@@ -37,8 +37,24 @@ export function formatTimestamp(date: Date = new Date()): string {
   );
 }
 
+/** Riga destinata alla console, già colorata; `key` identifica check ripetuti uguali. */
+export interface ConsoleLine {
+  time: string;
+  body: string;
+  level: LogLevel;
+  kind: "log" | "check";
+  key?: string;
+}
+
+/** Destinazione alternativa della console (la UI interattiva). */
+export interface ConsoleSink {
+  write(line: ConsoleLine): void;
+}
+
 export class Logger {
   private level: LogLevel = "info";
+  private sink: ConsoleSink | null = null;
+  private showDetails = false;
   private filePath: string | null = null;
   private fileBroken = false;
 
@@ -48,6 +64,21 @@ export class Logger {
       this.filePath = options.filePath;
       mkdirSync(dirname(options.filePath), { recursive: true });
     }
+  }
+
+  setSink(sink: ConsoleSink | null): void {
+    this.sink = sink;
+  }
+
+  /** Mostra i dettagli del detector a ogni check (toggle da tastiera). */
+  toggleDetails(): boolean {
+    this.showDetails = !this.showDetails;
+    return this.showDetails;
+  }
+
+  /** Solo su file: per informazioni che la UI mostra già in altra forma. */
+  record(msg: string): void {
+    this.appendToFile(redact(`${formatTimestamp()} | ${msg}`));
   }
 
   debug(msg: string): void {
@@ -68,6 +99,7 @@ export class Logger {
     const duration = `(${durationMs} ms)`;
     this.write("info", `${state.padEnd(13)} | ${text} ${duration}`, {
       console: `${paint(STATE_STYLE[state], `● ${state.padEnd(13)}`)} ${text} ${paint("dim", duration)}`,
+      key: `${state}|${text}`,
     });
   }
 
@@ -79,18 +111,23 @@ export class Logger {
 
   /** Dettaglio dei segnali del detector: visibile a info, altrimenti solo in debug. */
   detail(msg: string, visible: boolean): void {
-    this.write(visible ? "info" : "debug", `  ${msg}`, { console: paint("dim", `  ${msg}`) });
+    this.write(visible || this.showDetails ? "info" : "debug", `  ${msg}`, { console: paint("dim", `  ${msg}`) });
   }
 
-  private write(level: LogLevel, msg: string, options: { console?: string } = {}): void {
+  private write(level: LogLevel, msg: string, options: { console?: string; key?: string } = {}): void {
     if (LEVEL_ORDER[level] < LEVEL_ORDER[this.level]) return;
     const now = new Date();
     const prefix = level === "info" || level === "debug" ? "" : `${level.toUpperCase()} | `;
     this.appendToFile(redact(`${formatTimestamp(now)} | ${prefix}${msg}`));
 
     const stream = level === "error" || level === "warn" ? process.stderr : process.stdout;
-    const body = options.console ?? paint(LEVEL_STYLE[level], `${LEVEL_BADGE[level]}${msg}`, stream);
-    stream.write(`${paint("dim", formatTimestamp(now).slice(11), stream)}  ${redact(body)}\n`);
+    const body = redact(options.console ?? paint(LEVEL_STYLE[level], `${LEVEL_BADGE[level]}${msg}`, stream));
+    const time = formatTimestamp(now).slice(11);
+    if (this.sink) {
+      this.sink.write({ time, body, level, kind: options.key ? "check" : "log", key: options.key });
+      return;
+    }
+    stream.write(`${paint("dim", time, stream)}  ${body}\n`);
   }
 
   private appendToFile(line: string): void {
@@ -115,7 +152,7 @@ export class Logger {
 }
 
 /** Applica lo stile solo se lo stream è un terminale che supporta i colori (rispetta NO_COLOR). */
-function paint(style: Style | null | undefined, text: string, stream: NodeJS.WriteStream = process.stdout): string {
+export function paint(style: Style | null | undefined, text: string, stream: NodeJS.WriteStream = process.stdout): string {
   return style ? styleText(style, text, { stream }) : text;
 }
 

@@ -16,12 +16,35 @@ const RESTART_BACKOFF_MAX_MS = 120_000;
 const SLOWDOWN_MAX_FACTOR = 8;
 const SLOWDOWN_RECOVERY_MS = 30 * 60_000;
 
+export interface SessionStats {
+  startedAt: number;
+  checks: number;
+  totalCheckMs: number;
+  blockedEpisodes: number;
+  availableEpisodes: number;
+  notificationsSent: number;
+}
+
+/** Eventi per la UI del terminale: tutti opzionali, il Monitor funziona anche senza. */
+export interface MonitorObserver {
+  onBrowserStarted?(): void;
+  onCheckStart?(): void;
+  onCheckDone?(outcome: CheckOutcome, decision: TransitionDecision): void;
+  onSleep?(until: number, slowdownFactor: number): void;
+}
+
 export interface MonitorDeps {
   config: Config;
   watcher: AmazonWatcher;
   state: StateManager;
   telegram: TelegramNotifier;
   local: LocalNotifier;
+  observer?: MonitorObserver;
+  stats?: SessionStats;
+}
+
+export function createSessionStats(): SessionStats {
+  return { startedAt: Date.now(), checks: 0, totalCheckMs: 0, blockedEpisodes: 0, availableEpisodes: 0, notificationsSent: 0 };
 }
 
 /** Loop principale: check → transizione di stato → notifiche → attesa con jitter. */
@@ -32,8 +55,13 @@ export class Monitor {
   private localAlertDone = false;
   private slowdownFactor = 1;
   private lastSlowdownChangeAt = 0;
+  private wake: AbortController | null = null;
+  private forceNavigation = false;
+  readonly stats: SessionStats;
 
-  constructor(private readonly deps: MonitorDeps) {}
+  constructor(private readonly deps: MonitorDeps) {
+    this.stats = deps.stats ?? createSessionStats();
+  }
 
   async run(signal: AbortSignal): Promise<void> {
     const { config, state } = this.deps;
@@ -45,6 +73,7 @@ export class Monitor {
     while (!signal.aborted) {
       try {
         if (!(await this.ensureBrowser(signal))) continue;
+        this.deps.observer?.onCheckStart?.();
         const outcome = await this.observe();
         if (signal.aborted) break;
         await this.handle(outcome);
@@ -52,8 +81,18 @@ export class Monitor {
         // Ultima rete di sicurezza: nessun errore imprevisto deve fermare il loop.
         logger.error("Errore inatteso nel ciclo di controllo", err);
       }
-      await sleep(randomBetween(config.minPollIntervalMs, config.maxPollIntervalMs) * this.slowdownFactor, signal);
+      const delay = randomBetween(config.minPollIntervalMs, config.maxPollIntervalMs) * this.slowdownFactor;
+      this.deps.observer?.onSleep?.(Date.now() + delay, this.slowdownFactor);
+      this.wake = new AbortController();
+      await sleep(delay, AbortSignal.any([signal, this.wake.signal]));
+      this.wake = null;
     }
+  }
+
+  /** Interrompe l'attesa e forza una navigazione (anche se si è BLOCKED). */
+  requestCheckNow(): void {
+    this.forceNavigation = true;
+    this.wake?.abort();
   }
 
   /** Avvia/ricrea Chromium con backoff esponenziale. false = riprovare al giro successivo. */
@@ -63,6 +102,7 @@ export class Monitor {
     try {
       await watcher.start();
       this.restartFailures = 0;
+      this.deps.observer?.onBrowserStarted?.();
       return true;
     } catch (err) {
       this.restartFailures++;
@@ -83,7 +123,9 @@ export class Monitor {
    */
   private async observe(): Promise<CheckOutcome> {
     const { watcher, state, config } = this.deps;
-    if (state.current.lastState === "BLOCKED") {
+    const forced = this.forceNavigation;
+    this.forceNavigation = false;
+    if (state.current.lastState === "BLOCKED" && !forced) {
       const current = await watcher.inspectCurrentPage();
       const retryDue = Date.now() - this.lastNavigationAt >= config.blockedRetryIntervalMs;
       if (current.state !== "BLOCKED" || !retryDue) return current;
@@ -103,6 +145,8 @@ export class Monitor {
     this.log(outcome, decision);
     state.update(decision.next);
     this.adjustSlowdown(outcome.state, decision.changed, now.getTime());
+    this.updateStats(outcome, decision);
+    this.deps.observer?.onCheckDone?.(outcome, decision);
 
     if (outcome.state === "UNAVAILABLE") this.localAlertDone = false;
     if (decision.notifyAvailable) await this.notifyAvailable(outcome, now);
@@ -114,6 +158,15 @@ export class Monitor {
       logger.warn(`Alert tecnico ${kind} ${sent ? "inviato" : "NON inviato"} su Telegram`);
     }
     if (decision.recoveredAfterAlert) await this.deps.telegram.sendPlain(recoveredMessage());
+  }
+
+  private updateStats(outcome: CheckOutcome, d: TransitionDecision): void {
+    if (outcome.durationMs > 0) {
+      this.stats.checks++;
+      this.stats.totalCheckMs += outcome.durationMs;
+    }
+    if (d.changed && outcome.state === "BLOCKED") this.stats.blockedEpisodes++;
+    if (d.changed && outcome.state === "AVAILABLE") this.stats.availableEpisodes++;
   }
 
   private adjustSlowdown(observed: CheckOutcome["state"], changed: boolean, now: number): void {
@@ -144,6 +197,7 @@ export class Monitor {
     const sent = await telegram.sendWithAmazonButton(availableMessage(outcome.result, now));
     if (sent) {
       state.update(markAvailableNotified(state.current, now));
+      this.stats.notificationsSent++;
       logger.info("🚨 Notifica di disponibilità inviata su Telegram");
     } else {
       // Resta armato: riprova al prossimo check.
