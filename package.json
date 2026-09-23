@@ -1,0 +1,32 @@
+{
+  "name": "amazon-stock-watcher",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Watcher locale di disponibilità Amazon.it con notifiche Telegram (nessun acquisto automatico).",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run",
+    "test:telegram": "tsx src/scripts/testTelegram.ts",
+    "test:amazon": "tsx src/scripts/checkOnce.ts",
+    "telegram:test": "npm run test:telegram",
+    "amazon:test": "npm run test:amazon"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.0",
+    "linkedom": "^0.18.12",
+    "playwright": "^1.55.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}
