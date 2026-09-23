@@ -1,11 +1,26 @@
 import { appendFileSync, existsSync, mkdirSync, renameSync, statSync } from "node:fs";
 import { dirname } from "node:path";
+import { styleText } from "node:util";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 const LEVEL_ORDER: Record<LogLevel, number> = { debug: 10, info: 20, warn: 30, error: 40 };
 const MAX_LOG_BYTES = 5 * 1024 * 1024;
 const MAX_ROTATED_FILES = 3;
+
+type Style = Parameters<typeof styleText>[0];
+
+// Colori solo in console; il file resta testo semplice.
+const STATE_STYLE: Record<string, Style> = {
+  AVAILABLE: ["bold", "green"],
+  UNAVAILABLE: "gray",
+  BLOCKED: ["bold", "magenta"],
+  NETWORK_ERROR: "red",
+  UNKNOWN: "yellow",
+  STARTING: "cyan",
+};
+const LEVEL_STYLE: Record<LogLevel, Style | null> = { debug: "gray", info: null, warn: "yellow", error: ["bold", "red"] };
+const LEVEL_BADGE: Record<LogLevel, string> = { debug: "", info: "", warn: "⚠ ", error: "✖ " };
 
 // Qualunque cosa somigli a un token Telegram viene mascherata, anche dentro URL o stack.
 const SECRET_PATTERNS: RegExp[] = [/\d{6,}:[A-Za-z0-9_-]{30,}/g];
@@ -48,18 +63,34 @@ export class Logger {
     this.write("error", err === undefined ? msg : `${msg}: ${describeError(err)}`);
   }
 
-  /** Riga di check nel formato "data | STATO | testo". */
-  check(state: string, text: string): void {
-    this.write("info", `${state.padEnd(13)} | ${text}`, true);
+  /** Riga di check: "data | STATO | testo (durata)". */
+  check(state: string, text: string, durationMs: number): void {
+    const duration = `(${durationMs} ms)`;
+    this.write("info", `${state.padEnd(13)} | ${text} ${duration}`, {
+      console: `${paint(STATE_STYLE[state], `● ${state.padEnd(13)}`)} ${text} ${paint("dim", duration)}`,
+    });
   }
 
-  private write(level: LogLevel, msg: string, bare = false): void {
+  transition(from: string, to: string): void {
+    this.write("info", `Transizione ${from} -> ${to}`, {
+      console: `${paint("bold", "↳ Transizione")} ${paint(STATE_STYLE[from], from)} → ${paint(STATE_STYLE[to], to)}`,
+    });
+  }
+
+  /** Dettaglio dei segnali del detector: visibile a info, altrimenti solo in debug. */
+  detail(msg: string, visible: boolean): void {
+    this.write(visible ? "info" : "debug", `  ${msg}`, { console: paint("dim", `  ${msg}`) });
+  }
+
+  private write(level: LogLevel, msg: string, options: { console?: string } = {}): void {
     if (LEVEL_ORDER[level] < LEVEL_ORDER[this.level]) return;
-    const prefix = bare || level === "info" ? "" : `${level.toUpperCase()} | `;
-    const line = redact(`${formatTimestamp()} | ${prefix}${msg}`);
-    if (level === "error" || level === "warn") console.error(line);
-    else console.log(line);
-    this.appendToFile(line);
+    const now = new Date();
+    const prefix = level === "info" || level === "debug" ? "" : `${level.toUpperCase()} | `;
+    this.appendToFile(redact(`${formatTimestamp(now)} | ${prefix}${msg}`));
+
+    const stream = level === "error" || level === "warn" ? process.stderr : process.stdout;
+    const body = options.console ?? paint(LEVEL_STYLE[level], `${LEVEL_BADGE[level]}${msg}`, stream);
+    stream.write(`${paint("dim", formatTimestamp(now).slice(11), stream)}  ${redact(body)}\n`);
   }
 
   private appendToFile(line: string): void {
@@ -81,6 +112,11 @@ export class Logger {
     }
     renameSync(path, `${path}.1`);
   }
+}
+
+/** Applica lo stile solo se lo stream è un terminale che supporta i colori (rispetta NO_COLOR). */
+function paint(style: Style | null | undefined, text: string, stream: NodeJS.WriteStream = process.stdout): string {
+  return style ? styleText(style, text, { stream }) : text;
 }
 
 export function describeError(err: unknown): string {

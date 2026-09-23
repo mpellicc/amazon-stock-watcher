@@ -152,13 +152,9 @@ export class Monitor {
   }
 
   private log(outcome: CheckOutcome, d: TransitionDecision): void {
-    logger.check(outcome.state, `${outcome.summary} (${outcome.durationMs} ms)`);
-    if (d.changed) logger.info(`Transizione ${d.previous} -> ${outcome.state}`);
-    if (outcome.result) {
-      const detail = `  ${explainResult(outcome.result)}`;
-      if (d.changed || outcome.state === "AVAILABLE") logger.info(detail);
-      else logger.debug(detail);
-    }
+    logger.check(outcome.state, outcome.summary, outcome.durationMs);
+    if (d.changed) logger.transition(d.previous, outcome.state);
+    if (outcome.result) logger.detail(explainResult(outcome.result), d.changed || outcome.state === "AVAILABLE");
     if (d.recovered) logger.info(`Ritorno alla normalità dopo ${d.previous} (${this.deps.state.current.consecutiveProblems} problemi consecutivi)`);
   }
 }
