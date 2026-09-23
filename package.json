@@ -19,14 +19,14 @@
     "amazon:test": "npm run test:amazon"
   },
   "dependencies": {
-    "dotenv": "^17.2.0",
-    "linkedom": "^0.18.12",
-    "playwright": "^1.55.0"
+    "dotenv": "^18.0.3",
+    "linkedom": "^0.18.13",
+    "playwright": "^1.63.0"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
-    "tsx": "^4.20.0",
-    "typescript": "^5.9.0",
-    "vitest": "^3.2.0"
+    "@types/node": "^24.13.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.1"
   }
 }
