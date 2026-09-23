@@ -11,6 +11,10 @@ import { randomBetween, sleep } from "./utils/sleep.js";
 
 const RESTART_BACKOFF_MIN_MS = 2_000;
 const RESTART_BACKOFF_MAX_MS = 120_000;
+// Rallentamento adattivo: ogni nuovo episodio BLOCKED raddoppia l'intervallo di polling
+// (fino a 8x); dopo 30 minuti senza nuovi blocchi si dimezza di nuovo, un passo alla volta.
+const SLOWDOWN_MAX_FACTOR = 8;
+const SLOWDOWN_RECOVERY_MS = 30 * 60_000;
 
 export interface MonitorDeps {
   config: Config;
@@ -26,6 +30,8 @@ export class Monitor {
   private lastNavigationAt = 0;
   /** Suono/apertura browser una sola volta per episodio di disponibilità. */
   private localAlertDone = false;
+  private slowdownFactor = 1;
+  private lastSlowdownChangeAt = 0;
 
   constructor(private readonly deps: MonitorDeps) {}
 
@@ -46,7 +52,7 @@ export class Monitor {
         // Ultima rete di sicurezza: nessun errore imprevisto deve fermare il loop.
         logger.error("Errore inatteso nel ciclo di controllo", err);
       }
-      await sleep(randomBetween(config.minPollIntervalMs, config.maxPollIntervalMs), signal);
+      await sleep(randomBetween(config.minPollIntervalMs, config.maxPollIntervalMs) * this.slowdownFactor, signal);
     }
   }
 
@@ -96,6 +102,7 @@ export class Monitor {
 
     this.log(outcome, decision);
     state.update(decision.next);
+    this.adjustSlowdown(outcome.state, decision.changed, now.getTime());
 
     if (outcome.state === "UNAVAILABLE") this.localAlertDone = false;
     if (decision.notifyAvailable) await this.notifyAvailable(outcome, now);
@@ -107,6 +114,25 @@ export class Monitor {
       logger.warn(`Alert tecnico ${kind} ${sent ? "inviato" : "NON inviato"} su Telegram`);
     }
     if (decision.recoveredAfterAlert) await this.deps.telegram.sendPlain(recoveredMessage());
+  }
+
+  private adjustSlowdown(observed: CheckOutcome["state"], changed: boolean, now: number): void {
+    const { minPollIntervalMs, maxPollIntervalMs } = this.deps.config;
+    let next = this.slowdownFactor;
+    if (observed === "BLOCKED" && changed) {
+      next = Math.min(this.slowdownFactor * 2, SLOWDOWN_MAX_FACTOR);
+    } else if (observed !== "BLOCKED" && this.slowdownFactor > 1 && now - this.lastSlowdownChangeAt >= SLOWDOWN_RECOVERY_MS) {
+      next = this.slowdownFactor / 2;
+    }
+    // Un nuovo blocco con il fattore già al massimo riavvia comunque il periodo di recupero.
+    if (observed === "BLOCKED" && changed) this.lastSlowdownChangeAt = now;
+    if (next === this.slowdownFactor) return;
+    this.slowdownFactor = next;
+    this.lastSlowdownChangeAt = now;
+    logger.info(
+      `Polling ${next > 1 ? `rallentato ${next}x` : "tornato normale"}: ` +
+        `${(minPollIntervalMs * next) / 1000}-${(maxPollIntervalMs * next) / 1000} s`,
+    );
   }
 
   private async notifyAvailable(outcome: CheckOutcome, now: Date): Promise<void> {

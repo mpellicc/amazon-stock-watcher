@@ -6,6 +6,8 @@ import { StateManager } from "./state/StateManager.js";
 import { TelegramNotifier } from "./telegram/TelegramNotifier.js";
 import { logger } from "./utils/logger.js";
 
+const SIGNAL_DEBOUNCE_MS = 2000;
+
 function readConfig(): Config {
   try {
     return loadConfig({ requireTelegram: true });
@@ -40,11 +42,15 @@ async function main(): Promise<void> {
   });
 
   const controller = new AbortController();
+  let firstSignalAt = 0;
   const shutdown = (signal: string): void => {
     if (controller.signal.aborted) {
+      // Ctrl+C sotto npm arriva due volte quasi insieme (terminale + inoltro di npm): va ignorato.
+      if (Date.now() - firstSignalAt < SIGNAL_DEBOUNCE_MS) return;
       logger.warn("Secondo segnale ricevuto: uscita forzata");
       process.exit(1);
     }
+    firstSignalAt = Date.now();
     logger.info(`${signal} ricevuto: chiusura in corso...`);
     controller.abort();
   };

@@ -183,6 +183,7 @@ Stati: `STARTING`, `UNKNOWN`, `UNAVAILABLE`, `AVAILABLE`, `BLOCKED`, `NETWORK_ER
   - `NETWORK_ERROR` / `UNKNOWN`: solo log per i primi errori; alla soglia `PROBLEM_ALERT_THRESHOLD` consecutiva (default 6, circa 1 minuto) un Telegram per episodio;
   - tra due alert tecnici passa almeno `TECHNICAL_NOTIFICATION_COOLDOWN_MINUTES`;
   - al ritorno alla normalità: riga di log e, se era partito un alert, un messaggio "✅ tornato alla normalità".
+- **Rallentamento adattivo**: ogni nuovo episodio `BLOCKED` raddoppia l'intervallo di polling (fino a 8x). Dopo 30 minuti senza nuovi blocchi l'intervallo si dimezza, un passo alla volta, fino a tornare normale. Ogni variazione viene loggata. Il fattore vive in memoria: un riavvio lo azzera.
 - **In `BLOCKED`** il watcher non ricarica a ogni giro. Rilegge la pagina corrente (con `HEADLESS=false` puoi risolvere tu la verifica nella finestra di Chromium) e rinaviga solo ogni `BLOCKED_RETRY_INTERVAL_MS`.
 
 ### Robustezza
