@@ -1,6 +1,6 @@
 # amazon-stock-watcher
 
-🇬🇧 **English** | 🇮🇹 [Italiano](README.it.md)
+🇬🇧 [English](README.md) | 🇮🇹 **Italiano**
 
 ![TypeScript](https://img.shields.io/badge/language-TypeScript-3178c6?logo=typescript&logoColor=white)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D22-43853d?logo=node.js&logoColor=white)
@@ -8,34 +8,34 @@
 ![Last Commit](https://img.shields.io/github/last-commit/mpellicc/amazon-stock-watcher)
 ![GitHub Stars](https://img.shields.io/github/stars/mpellicc/amazon-stock-watcher?style=flat)
 
-A local watcher that keeps a real Chromium open (Playwright), checks an Amazon product page at random intervals
-(default 9-14 s) and alerts you **immediately on Telegram** (plus a local sound and, optionally, opening the browser)
-when the product goes from _not purchasable_ to _purchasable/pre-orderable_. You can query it remotely with bot
-commands (`/recap`, `/check`) and it sends a periodic recap.
+Un watcher locale che mantiene aperto un vero Chromium (Playwright), controlla una pagina prodotto Amazon a intervalli casuali
+(default 9-14 s) e ti avvisa **subito su Telegram** (più un suono locale e, opzionalmente, l'apertura del browser)
+quando il prodotto passa da _non acquistabile_ a _acquistabile/preordinabile_. Puoi interrogarlo da remoto con i comandi
+del bot (`/recap`, `/check`) e invia anche un recap periodico.
 
 > [!TIP]
-> Quick start:
+> Avvio rapido:
 > 1. `npm install`
 > 2. `npx playwright install chromium`
-> 3. `cp .env.example .env` and set Telegram values
+> 3. `cp .env.example .env` e configura i valori Telegram
 > 4. `npm run test:telegram`
-> 5. `npm run dev` (or `npm run build && npm start`)
+> 5. `npm run dev` (oppure `npm run build && npm start`)
 
 > [!IMPORTANT]
-> **It never buys anything.** No login, cart, checkout or automatic purchase.
-> No CAPTCHA bypass, stealth, proxies or fingerprint spoofing: if Amazon asks for a verification the watcher goes `BLOCKED` and tells you.
+> **Non compra mai nulla.** Nessun login, carrello, checkout o acquisto automatico.
+> Nessun bypass CAPTCHA, stealth, proxy o fingerprint spoofing: se Amazon chiede una verifica il watcher va in `BLOCKED` e te lo segnala.
 
-The product is chosen at startup (see [Choosing the product](#choosing-the-product)).
+Il prodotto viene scelto all'avvio (vedi [Scelta del prodotto](#scelta-del-prodotto)).
 
 ---
 
-## Requirements
+## Requisiti
 
 - **Node.js 22+** (tested with Node 24 LTS)
 - **Playwright's Chromium** (`npx playwright install chromium`)
 - A **Telegram bot** and your `chat_id`
 
-## Setup
+## Configurazione
 
 ```bash
 git clone https://github.com/mpellicc/amazon-stock-watcher.git
@@ -47,14 +47,14 @@ cp .env.example .env
 npm run test:telegram   # you should receive "✅ Telegram is configured correctly."
 ```
 
-### Creating the Telegram bot
+### Creazione del bot Telegram
 
 1. On Telegram open **@BotFather** and send `/newbot`.
 2. Pick a name and a username (it must end in `bot`).
 3. BotFather replies with the **token** (`123456789:AA...`): put it in `TELEGRAM_BOT_TOKEN`.
 4. Open the chat with your new bot and press **Start** / send any message (otherwise the bot cannot write to you).
 
-### Getting the `chat_id`
+### Ottenere il `chat_id`
 
 After writing to the bot, open this in a browser (replace the token):
 
@@ -65,7 +65,7 @@ https://api.telegram.org/bot<TOKEN>/getUpdates
 Look for `"chat":{"id":123456789,...}`: that number is the `TELEGRAM_CHAT_ID`.
 Alternatively, write to **@userinfobot**, which replies with your id.
 
-## Configuration (`.env`)
+## Configurazione (`.env`)
 
 | Variable                                        | Default          | Description                                                                        |
 | ----------------------------------------------- | ---------------- | ---------------------------------------------------------------------------------- |
@@ -87,9 +87,9 @@ Alternatively, write to **@userinfobot**, which replies with your id.
 
 The configuration is validated at startup: if something is missing you get a clear message and the process exits.
 
-## Running
+## Esecuzione
 
-### Choosing the product
+### Scelta del prodotto
 
 In order of precedence:
 
@@ -100,7 +100,7 @@ In order of precedence:
 Any Amazon product URL works (with the product name, `ref=`, query parameters…): the ASIN is extracted and the URL normalized to `/dp/<ASIN>`. Short `amzn.eu` links are not supported.
 Each product has its own state (`data/state-<ASIN>.json`), so switching product does not inherit "disarmed" from the previous one.
 
-### Telegram: recap and commands
+### Telegram: recap e comandi
 
 - **Recap** every `RECAP_INTERVAL_HOURS` hours: state, checks in the period, average latency, blocks, network errors, uptime.
 - **Commands** (shown in the bot's `/` menu, answered only for your `TELEGRAM_CHAT_ID`):
@@ -111,7 +111,7 @@ Each product has its own state (`data/state-<ASIN>.json`), so switching product 
 - A bot can only be read by one process: with two watchers on the same bot, commands work on just one of them (the other logs it).
 - To see what is going on when commands do not answer (PC off, crash), use a remote desktop, e.g. Chrome Remote Desktop or RustDesk. It also lets you solve a CAPTCHA while away from home, with `HEADLESS=false`.
 
-### npm scripts
+### Script npm
 
 Development (TypeScript directly):
 
@@ -135,7 +135,7 @@ npm run test:telegram   # test message with the "🛒 OPEN ON AMAZON" button
 npm run test:amazon     # a single real check, prints state and signals (-- -p <url> for another product, -- --headed to see the browser)
 ```
 
-### Terminal UI
+### Interfaccia terminale
 
 When started from an interactive terminal (`npm run dev`, `npm start`):
 
@@ -148,7 +148,7 @@ When started from an interactive terminal (`npm run dev`, `npm start`):
 
 Under pm2, launchd, systemd or with output redirected to a file the UI is not enabled: you get plain log lines, with no colors or control sequences.
 
-### Logs
+### Log
 
 Logs go both to the console and to `logs/watcher.log`, in different formats.
 
@@ -190,9 +190,9 @@ Detector details (`reason=…`) appear only when the state changes, or always wi
 
 ---
 
-## How it works
+## Come funziona
 
-### Architecture
+### Architettura
 
 ```text
 src/
@@ -229,7 +229,7 @@ The detector receives the **HTML rendered by Chromium** (`page.content()`, i.e. 
 and parses it with `linkedom`. It is the same function in production and in the tests, which run against local
 fixtures with no browser and no network.
 
-### `page.goto()` instead of `page.reload()`
+### `page.goto()` invece di `page.reload()`
 
 Every check performs a **fresh navigation** to the product URL, in the same page and the same Chromium:
 
@@ -240,7 +240,7 @@ Every check performs a **fresh navigation** to the product URL, in the same page
 The browser uses a **persistent profile** (`data/browser-profile`): cookies and consent survive restarts,
 like for a normal user. It waits for `domcontentloaded`, then up to 10 s for the title or the CAPTCHA, then up to 3 s for the buybox.
 
-### Classification (detector)
+### Classificazione (detector)
 
 Signals collected: the `#add-to-cart-button`, `#buy-now-button`, `submit.preorder` buttons, plus a
 **text fallback limited to the buybox** ("Aggiungi al carrello", "Acquista ora", "Preordina ora", "Add to Cart",
@@ -266,7 +266,7 @@ Known fragile spots, and how they are handled:
 - a third-party seller (even at an inflated price) still produces `AVAILABLE`: the seller, when detectable, appears in the log and in the message;
 - if Amazon radically changes its markup the most likely result is `UNKNOWN` (which after a few checks triggers a technical alert), not a false positive.
 
-### State machine and notifications
+### Macchina a stati e notifiche
 
 States: `STARTING`, `UNKNOWN`, `UNAVAILABLE`, `AVAILABLE`, `BLOCKED`, `NETWORK_ERROR`.
 
@@ -285,7 +285,7 @@ States: `STARTING`, `UNKNOWN`, `UNAVAILABLE`, `AVAILABLE`, `BLOCKED`, `NETWORK_E
 - **Adaptive slowdown**: every new `BLOCKED` episode doubles the polling interval (up to 8x). After 30 minutes without new blocks the interval is halved, one step at a time, until it is back to normal. Every change is logged. The factor lives in memory: a restart resets it.
 - **While `BLOCKED`** the watcher does not reload on every round. It re-reads the current page (with `HEADLESS=false` you can solve the verification yourself in the Chromium window) and navigates again only every `BLOCKED_RETRY_INTERVAL_MS`.
 
-### Robustness
+### Robustezza
 
 - Timeouts, `ERR_CONNECTION_RESET`, DNS and navigation failures become `NETWORK_ERROR` and the loop keeps going.
 - Page or browser crash, or context closed: Chromium is recreated with exponential backoff (2 s → 2 min).
@@ -296,7 +296,7 @@ States: `STARTING`, `UNKNOWN`, `UNAVAILABLE`, `AVAILABLE`, `BLOCKED`, `NETWORK_E
 
 ---
 
-## Start automatically with the PC
+## Avvio automatico con il PC
 
 Run `npm run build` first. In the commands below replace `/path/to/amazon-stock-watcher` with the real path.
 
@@ -384,14 +384,14 @@ journalctl --user -u amazon-stock-watcher -f
 
 ---
 
-## Security
+## Sicurezza
 
 - `.env`, `data/` and `logs/` are in `.gitignore`: never commit secrets.
 - The code does not log in to Amazon, does not add to cart, does not check out, does not solve or bypass CAPTCHAs, and does not use stealth plugins, proxies or fingerprint spoofing.
 - Jittered polling (default 9-14 s) with automatic slowdown when Amazon asks for verifications: a user reloading the page, not a crawler.
 - Telegram commands are answered only for the configured `TELEGRAM_CHAT_ID`; messages from other chats are ignored.
 
-## Disclaimer
+## Note legali
 
 This is a personal, non-commercial project made for educational purposes. It is not affiliated with,
 endorsed by or sponsored by Amazon. "Amazon" is a trademark of Amazon.com, Inc. or its affiliates,
@@ -403,7 +403,7 @@ this tool and for complying with Amazon's terms and the laws that apply to you.
 The software is provided "as is", without warranty of any kind (see [LICENSE](LICENSE)): it may miss an
 availability window, be blocked by Amazon, or stop working if Amazon changes its pages.
 
-## License
+## Licenza
 
 Copyright (C) 2026 [@mpellicc](https://github.com/mpellicc)
 
