@@ -3,8 +3,8 @@ import { existsSync } from "node:fs";
 import { describeError, logger } from "../utils/logger.js";
 
 /*
- * Notifiche locali best-effort: ogni errore viene loggato e ignorato.
- * Nessuna dipendenza esterna: si usano i comandi nativi del sistema operativo.
+ * Best-effort local notifications: every error is logged and ignored.
+ * No external dependencies: native OS commands only.
  */
 
 const MAC_SOUND = "/System/Library/Sounds/Glass.aiff";
@@ -26,7 +26,7 @@ export class LocalNotifier {
   playSound(): void {
     switch (process.platform) {
       case "darwin":
-        run("sh", ["-c", `for i in $(seq ${REPEAT}); do afplay '${MAC_SOUND}'; done`], "suono");
+        run("sh", ["-c", `for i in $(seq ${REPEAT}); do afplay '${MAC_SOUND}'; done`], "sound");
         return;
       case "win32":
         run(
@@ -36,12 +36,12 @@ export class LocalNotifier {
             "-Command",
             `$p = New-Object Media.SoundPlayer '${WINDOWS_SOUND}'; 1..${REPEAT} | ForEach-Object { $p.PlaySync() }`,
           ],
-          "suono",
+          "sound",
         );
         return;
       default: {
         const file = LINUX_SOUNDS.find((f) => existsSync(f));
-        if (file) run("sh", ["-c", `for i in $(seq ${REPEAT}); do paplay '${file}' || aplay '${file}'; done`], "suono");
+        if (file) run("sh", ["-c", `for i in $(seq ${REPEAT}); do paplay '${file}' || aplay '${file}'; done`], "sound");
         else process.stdout.write("\x07\x07\x07");
       }
     }
@@ -49,18 +49,18 @@ export class LocalNotifier {
 
   openUrl(url: string): void {
     if (!/^https:\/\//.test(url)) return;
-    if (process.platform === "darwin") run("open", [url], "apertura browser");
-    else if (process.platform === "win32") run("cmd", ["/c", "start", "", url], "apertura browser");
-    else run("xdg-open", [url], "apertura browser");
+    if (process.platform === "darwin") run("open", [url], "open browser");
+    else if (process.platform === "win32") run("cmd", ["/c", "start", "", url], "open browser");
+    else run("xdg-open", [url], "open browser");
   }
 }
 
 function run(cmd: string, args: string[], what: string): void {
   try {
     const child = spawn(cmd, args, { stdio: "ignore", detached: true, windowsHide: true });
-    child.on("error", (err) => logger.warn(`Notifica locale (${what}) fallita: ${describeError(err)}`));
+    child.on("error", (err) => logger.warn(`Local notification (${what}) failed: ${describeError(err)}`));
     child.unref();
   } catch (err) {
-    logger.warn(`Notifica locale (${what}) fallita: ${describeError(err)}`);
+    logger.warn(`Local notification (${what}) failed: ${describeError(err)}`);
   }
 }

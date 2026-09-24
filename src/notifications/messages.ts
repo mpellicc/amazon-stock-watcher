@@ -6,41 +6,41 @@ import { formatDuration } from "../ui/ansi.js";
 const HEADER = "Amazon Stock Watcher";
 
 export function formatTime(date: Date): string {
-  return date.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 }
 
 export function availableMessage(result: AvailabilityResult | undefined, detectedAt: Date): string {
-  const status = result?.buttonLabel ?? result?.availabilityText ?? "Acquistabile";
+  const status = result?.buttonLabel ?? result?.availabilityText ?? "Purchasable";
   const lines = [
-    "🚨 PREORDER AMAZON DISPONIBILE",
+    "🚨 AMAZON PRODUCT AVAILABLE",
     "",
-    `🎮 ${result?.title ?? "Prodotto monitorato"}`,
+    `🎮 ${result?.title ?? "Watched product"}`,
     "",
-    "Amazon lo mostra ora come ordinabile/preordinabile.",
+    "Amazon now shows it as orderable/pre-orderable.",
     "",
-    `🕒 Rilevato alle: ${formatTime(detectedAt)}`,
-    `📦 Stato: ${status}`,
+    `🕒 Detected at: ${formatTime(detectedAt)}`,
+    `📦 Status: ${status}`,
   ];
-  if (result?.merchant) lines.push(`🏪 Venditore: ${result.merchant}`);
-  lines.push("", "Apri subito Amazon:");
+  if (result?.merchant) lines.push(`🏪 Seller: ${result.merchant}`);
+  lines.push("", "Open Amazon now:");
   return lines.join("\n");
 }
 
 export function technicalMessage(kind: ProblemState, consecutive: number): string {
   const body: Record<ProblemState, string> = {
-    BLOCKED: "Amazon sta richiedendo una verifica manuale / CAPTCHA.\n\nIl watcher è temporaneamente bloccato.",
-    NETWORK_ERROR: `Amazon non è raggiungibile da ${consecutive} controlli consecutivi (rete/timeout).\n\nIl watcher continua a riprovare.`,
-    UNKNOWN: `La pagina Amazon risulta anomala da ${consecutive} controlli consecutivi.\n\nIl watcher continua a riprovare.`,
+    BLOCKED: "Amazon is asking for a manual verification / CAPTCHA.\n\nThe watcher is temporarily blocked.",
+    NETWORK_ERROR: `Amazon has been unreachable for ${consecutive} consecutive checks (network/timeout).\n\nThe watcher keeps retrying.`,
+    UNKNOWN: `The Amazon page has looked anomalous for ${consecutive} consecutive checks.\n\nThe watcher keeps retrying.`,
   };
   return `⚠️ ${HEADER}\n\n${body[kind]}`;
 }
 
 export function recoveredMessage(): string {
-  return `✅ ${HEADER}\n\nIl monitoraggio è tornato alla normalità.`;
+  return `✅ ${HEADER}\n\nMonitoring is back to normal.`;
 }
 
 export function telegramTestMessage(): string {
-  return `✅ ${HEADER}\n\nTelegram configurato correttamente.`;
+  return `✅ ${HEADER}\n\nTelegram is configured correctly.`;
 }
 
 export interface RecapData {
@@ -52,26 +52,26 @@ export interface RecapData {
   state: WatcherState;
   armed: boolean;
   lastCheckAt?: Date;
-  /** null = recap periodico disattivato. */
+  /** null = periodic recap disabled. */
   nextRecapAt: Date | null;
 }
 
 export function recapMessage(d: RecapData): string {
-  const avg = d.period.checks > 0 ? `${(d.period.totalCheckMs / d.period.checks / 1000).toFixed(1).replace(".", ",")} s` : "-";
+  const avg = d.period.checks > 0 ? `${(d.period.totalCheckMs / d.period.checks / 1000).toFixed(1)} s` : "-";
   const lines = [
-    `📊 ${HEADER} · recap ultime ${formatDuration(d.now.getTime() - d.periodStartedAt)}`,
+    `📊 ${HEADER} · recap of the last ${formatDuration(d.now.getTime() - d.periodStartedAt)}`,
     "",
-    `🎮 ${d.title ?? "Prodotto monitorato"}`,
-    `📦 Stato: ${d.state} (${d.armed ? "armed" : "disarmed"})`,
-    `🔎 Check: ${d.period.checks.toLocaleString("it-IT")} · media ${avg}`,
-    `🧱 Blocchi CAPTCHA: ${d.period.blockedEpisodes} · errori di rete: ${d.period.networkErrors}`,
+    `🎮 ${d.title ?? "Watched product"}`,
+    `📦 State: ${d.state} (${d.armed ? "armed" : "disarmed"})`,
+    `🔎 Checks: ${d.period.checks.toLocaleString("en-US")} · avg ${avg}`,
+    `🧱 CAPTCHA blocks: ${d.period.blockedEpisodes} · network errors: ${d.period.networkErrors}`,
   ];
-  if (d.period.availableEpisodes > 0) lines.push(`🚨 Disponibilità rilevate: ${d.period.availableEpisodes}`);
+  if (d.period.availableEpisodes > 0) lines.push(`🚨 Availability detected: ${d.period.availableEpisodes}`);
   lines.push(
-    `⏱ Attivo da: ${formatDuration(d.now.getTime() - d.session.startedAt)}`,
-    `🕒 Ultimo check: ${d.lastCheckAt ? formatTime(d.lastCheckAt) : "-"}`,
+    `⏱ Up for: ${formatDuration(d.now.getTime() - d.session.startedAt)}`,
+    `🕒 Last check: ${d.lastCheckAt ? formatTime(d.lastCheckAt) : "-"}`,
     "",
-    d.nextRecapAt ? `Prossimo recap alle ${formatTime(d.nextRecapAt).slice(0, 5)}` : "Recap periodico disattivato",
+    d.nextRecapAt ? `Next recap at ${formatTime(d.nextRecapAt).slice(0, 5)}` : "Periodic recap disabled",
   );
   return lines.join("\n");
 }

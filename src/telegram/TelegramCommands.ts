@@ -3,8 +3,8 @@ import { sleep } from "../utils/sleep.js";
 import type { TelegramNotifier, TelegramUpdate } from "./TelegramNotifier.js";
 
 /*
- * Comandi Telegram via long polling (getUpdates): nessuna porta aperta, nessun webhook.
- * Si risponde solo alla chat configurata; i messaggi di chiunque altro vengono ignorati.
+ * Telegram commands via long polling (getUpdates): no open ports, no webhook.
+ * Only the configured chat gets answers; messages from anyone else are ignored.
  */
 
 const POLL_TIMEOUT_SEC = 30;
@@ -23,8 +23,8 @@ export interface CommandHandlers {
 }
 
 export const BOT_COMMANDS = [
-  { command: "recap", description: "Recap ora · /recap N = recap ogni N ore (0 = off)" },
-  { command: "check", description: "Esegue subito un check e ne riporta l'esito" },
+  { command: "recap", description: "Recap now · /recap N = recap every N hours (0 = off)" },
+  { command: "check", description: "Runs a check right now and reports the result" },
 ];
 
 export class TelegramCommands {
@@ -50,8 +50,8 @@ export class TelegramCommands {
           signal,
         );
         if (status === 409) {
-          // Un altro processo (o un webhook) sta leggendo lo stesso bot.
-          if (!this.conflictWarned) logger.warn("Comandi Telegram non disponibili: un altro processo sta usando lo stesso bot");
+          // Another process (or a webhook) is reading the same bot.
+          if (!this.conflictWarned) logger.warn("Telegram commands unavailable: another process is using the same bot");
           this.conflictWarned = true;
           await sleep(BACKOFF_MAX_MS, signal);
           continue;
@@ -64,7 +64,7 @@ export class TelegramCommands {
         }
       } catch (err) {
         if (signal.aborted) break;
-        logger.debug(`Polling comandi Telegram: ${describeError(err)} (riprovo tra ${backoff / 1000}s)`);
+        logger.debug(`Telegram command polling: ${describeError(err)} (retrying in ${backoff / 1000}s)`);
         await sleep(backoff, signal);
         backoff = Math.min(backoff * 2, BACKOFF_MAX_MS);
       }
@@ -74,7 +74,7 @@ export class TelegramCommands {
   private async handle(update: TelegramUpdate): Promise<void> {
     const message = update.message;
     if (!message?.text || !this.isOwnChat(message.chat)) return;
-    // "/recap@NomeBot 4" → ["recap", "4"]
+    // "/recap@MyBot 4" → ["recap", "4"]
     const [rawCommand = "", arg] = message.text.trim().split(/\s+/);
     const command = rawCommand.replace(/^\//, "").replace(/@.*$/, "").toLowerCase();
 
@@ -85,19 +85,19 @@ export class TelegramCommands {
       else if (command === "check") reply = await this.handlers.check();
       else return;
     } catch (err) {
-      reply = { text: `⚠️ Comando /${command} fallito: ${describeError(err)}` };
+      reply = { text: `⚠️ Command /${command} failed: ${describeError(err)}` };
     }
-    logger.info(`Comando Telegram /${command}${arg ? ` ${arg}` : ""}`);
+    logger.info(`Telegram command /${command}${arg ? ` ${arg}` : ""}`);
     const sent = reply.withAmazonButton
       ? await this.telegram.sendWithAmazonButton(reply.text)
       : await this.telegram.sendPlain(reply.text);
-    if (!sent) logger.warn(`Risposta a /${command} non consegnata`);
+    if (!sent) logger.warn(`Reply to /${command} not delivered`);
   }
 
   private parseInterval(arg: string): CommandReply {
     const hours = Number(arg.replace(",", "."));
     if (!Number.isFinite(hours) || hours < 0 || hours > 168) {
-      return { text: "Uso: /recap N — N ore tra un recap e l'altro (0 = disattivato, max 168)" };
+      return { text: "Usage: /recap N — N hours between recaps (0 = disabled, max 168)" };
     }
     return this.handlers.setRecapInterval(hours);
   }
@@ -107,14 +107,14 @@ export class TelegramCommands {
     return String(chat.id) === configured || (chat.username !== undefined && `@${chat.username}` === configured);
   }
 
-  /** Ignora i comandi inviati mentre il watcher era spento: eseguirli ora sarebbe fuorviante. */
+  /** Ignores commands sent while the watcher was off: running them now would be misleading. */
   private async skipPendingUpdates(signal: AbortSignal): Promise<void> {
     try {
       const { data } = await this.telegram.call<TelegramUpdate[]>("getUpdates", { offset: -1, timeout: 0 }, 10_000, signal);
       const last = data.result?.at(-1);
       if (last) this.offset = last.update_id + 1;
     } catch (err) {
-      logger.debug(`Lettura comandi pendenti fallita: ${describeError(err)}`);
+      logger.debug(`Reading pending commands failed: ${describeError(err)}`);
     }
   }
 
@@ -122,7 +122,7 @@ export class TelegramCommands {
     try {
       await this.telegram.call("setMyCommands", { commands: BOT_COMMANDS });
     } catch (err) {
-      logger.debug(`Registrazione menu comandi fallita: ${describeError(err)}`);
+      logger.debug(`Registering the command menu failed: ${describeError(err)}`);
     }
   }
 }

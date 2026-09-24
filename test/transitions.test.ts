@@ -12,7 +12,7 @@ const policy = { problemAlertThreshold: 3, cooldownMs: 30 * 60_000 };
 const t0 = new Date("2026-09-23T15:30:00Z");
 const at = (sec: number): Date => new Date(t0.getTime() + sec * 1000);
 
-/** Simula il Monitor: applica le osservazioni e marca come consegnate le notifiche. */
+/** Simulates the Monitor: applies the observations and marks notifications as delivered. */
 function simulate(states: WatcherState[], start: PersistedState = initialState()) {
   let s = start;
   const events: string[] = [];
@@ -33,56 +33,56 @@ function simulate(states: WatcherState[], start: PersistedState = initialState()
   return { state: s, events };
 }
 
-describe("transizioni di stato", () => {
-  it("UNAVAILABLE -> AVAILABLE notifica una volta sola, AVAILABLE -> AVAILABLE no", () => {
+describe("state transitions", () => {
+  it("UNAVAILABLE -> AVAILABLE notifies once, AVAILABLE -> AVAILABLE does not", () => {
     const { events } = simulate(["UNAVAILABLE", "AVAILABLE", "AVAILABLE", "AVAILABLE"]);
     expect(events).toEqual(["AVAILABLE@1"]);
   });
 
-  it("AVAILABLE -> UNAVAILABLE -> AVAILABLE genera una nuova notifica", () => {
+  it("AVAILABLE -> UNAVAILABLE -> AVAILABLE triggers a new notification", () => {
     const { events } = simulate(["UNAVAILABLE", "AVAILABLE", "UNAVAILABLE", "AVAILABLE"]);
     expect(events).toEqual(["AVAILABLE@1", "AVAILABLE@3"]);
   });
 
-  it("STARTING/UNKNOWN -> AVAILABLE notifica", () => {
+  it("STARTING/UNKNOWN -> AVAILABLE notifies", () => {
     expect(simulate(["AVAILABLE"]).events).toEqual(["AVAILABLE@0"]);
     expect(simulate(["UNKNOWN", "AVAILABLE"]).events).toEqual(["AVAILABLE@1"]);
   });
 
-  it("un errore di rete in mezzo a AVAILABLE non rinotifica", () => {
+  it("a network error in the middle of AVAILABLE does not re-notify", () => {
     const { events } = simulate(["AVAILABLE", "NETWORK_ERROR", "AVAILABLE"]);
     expect(events).toEqual(["AVAILABLE@0"]);
   });
 
-  it("dopo un riavvio in AVAILABLE non rinotifica (stato persistito)", () => {
+  it("after a restart while AVAILABLE it does not re-notify (persisted state)", () => {
     const first = simulate(["UNAVAILABLE", "AVAILABLE"]);
     const restarted = JSON.parse(JSON.stringify(first.state)) as PersistedState;
     expect(simulate(["AVAILABLE"], restarted).events).toEqual([]);
   });
 
-  it("se Telegram fallisce resta armato e riprova al check successivo", () => {
+  it("if Telegram fails it stays armed and retries on the next check", () => {
     const d1 = applyObservation(initialState(), "AVAILABLE", at(0), policy);
     expect(d1.notifyAvailable).toBe(true);
     const d2 = applyObservation(d1.next, "AVAILABLE", at(10), policy);
     expect(d2.notifyAvailable).toBe(true);
   });
 
-  it("1-2 errori di rete: nessun alert; alla soglia: un solo alert; poi recupero", () => {
+  it("1-2 network errors: no alert; at the threshold: a single alert; then recovery", () => {
     const { events } = simulate(["UNAVAILABLE", "NETWORK_ERROR", "NETWORK_ERROR", "NETWORK_ERROR", "NETWORK_ERROR", "UNAVAILABLE"]);
     expect(events).toEqual(["NETWORK_ERROR@3", "RECOVERED@5"]);
   });
 
-  it("BLOCKED avvisa subito e una sola volta", () => {
+  it("BLOCKED alerts immediately and only once", () => {
     const { events } = simulate(["UNAVAILABLE", "BLOCKED", "BLOCKED", "BLOCKED"]);
     expect(events).toEqual(["BLOCKED@1"]);
   });
 
-  it("il cooldown impedisce alert ravvicinati tra episodi diversi", () => {
+  it("the cooldown prevents close alerts across different episodes", () => {
     const { events } = simulate(["BLOCKED", "UNAVAILABLE", "BLOCKED"]);
     expect(events).toEqual(["BLOCKED@0", "RECOVERED@1"]);
   });
 
-  it("recupero senza alert: nessun messaggio", () => {
+  it("recovery without an alert: no message", () => {
     expect(simulate(["NETWORK_ERROR", "UNAVAILABLE"]).events).toEqual([]);
   });
 });

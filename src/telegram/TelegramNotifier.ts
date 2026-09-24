@@ -33,9 +33,9 @@ export class TelegramNotifier {
     return this.config.chatId;
   }
 
-  /** Messaggio con il bottone "🛒 APRI SU AMAZON". Restituisce true se consegnato. */
+  /** Message with the "🛒 OPEN ON AMAZON" button. Returns true if delivered. */
   sendWithAmazonButton(text: string): Promise<boolean> {
-    return this.send(text, { text: "🛒 APRI SU AMAZON", url: this.productUrl });
+    return this.send(text, { text: "🛒 OPEN ON AMAZON", url: this.productUrl });
   }
 
   sendPlain(text: string): Promise<boolean> {
@@ -43,8 +43,8 @@ export class TelegramNotifier {
   }
 
   /**
-   * Chiamata grezza alla Bot API. Lancia solo su errori di rete/timeout.
-   * L'URL contiene il token: non va mai loggato né incluso negli errori.
+   * Raw Bot API call. Throws only on network errors/timeouts.
+   * The URL contains the token: it must never be logged or included in errors.
    */
   async call<T>(method: string, body: object, timeoutMs = REQUEST_TIMEOUT_MS, signal?: AbortSignal): Promise<{ status: number; data: TelegramResponse<T> }> {
     const timeout = AbortSignal.timeout(timeoutMs);
@@ -71,13 +71,13 @@ export class TelegramNotifier {
         const { status, data } = await this.call("sendMessage", body);
         if (status === 200 && data.ok) return true;
 
-        logger.warn(`Telegram ha risposto ${status}: ${data.description ?? "errore sconosciuto"} (tentativo ${attempt})`);
-        // Errori di configurazione (token/chat errati): inutile riprovare.
+        logger.warn(`Telegram replied ${status}: ${data.description ?? "unknown error"} (attempt ${attempt})`);
+        // Configuration errors (wrong token/chat): retrying is pointless.
         if (status === 400 || status === 401 || status === 403 || status === 404) return false;
         const retryAfterMs = (data.parameters?.retry_after ?? 0) * 1000;
         if (attempt < MAX_ATTEMPTS) await sleep(Math.max(retryAfterMs, 1000 * attempt));
       } catch (err) {
-        logger.warn(`Telegram non raggiungibile: ${describeError(err)} (tentativo ${attempt})`);
+        logger.warn(`Telegram unreachable: ${describeError(err)} (attempt ${attempt})`);
         if (attempt < MAX_ATTEMPTS) await sleep(1000 * attempt);
       }
     }

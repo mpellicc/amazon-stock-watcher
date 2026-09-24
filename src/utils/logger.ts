@@ -10,7 +10,7 @@ const MAX_ROTATED_FILES = 3;
 
 type Style = Parameters<typeof styleText>[0];
 
-// Colori solo in console; il file resta testo semplice.
+// Colors on the console only; the file stays plain text.
 export const STATE_STYLE: Record<string, Style> = {
   AVAILABLE: ["bold", "green"],
   UNAVAILABLE: "gray",
@@ -22,7 +22,7 @@ export const STATE_STYLE: Record<string, Style> = {
 const LEVEL_STYLE: Record<LogLevel, Style | null> = { debug: "gray", info: null, warn: "yellow", error: ["bold", "red"] };
 const LEVEL_BADGE: Record<LogLevel, string> = { debug: "", info: "", warn: "⚠ ", error: "✖ " };
 
-// Qualunque cosa somigli a un token Telegram viene mascherata, anche dentro URL o stack.
+// Anything that looks like a Telegram token gets masked, even inside URLs or stacks.
 const SECRET_PATTERNS: RegExp[] = [/\d{6,}:[A-Za-z0-9_-]{30,}/g];
 
 export function redact(text: string): string {
@@ -37,7 +37,7 @@ export function formatTimestamp(date: Date = new Date()): string {
   );
 }
 
-/** Riga destinata alla console, già colorata; `key` identifica check ripetuti uguali. */
+/** Line meant for the console, already colored; `key` identifies identical repeated checks. */
 export interface ConsoleLine {
   time: string;
   body: string;
@@ -46,7 +46,7 @@ export interface ConsoleLine {
   key?: string;
 }
 
-/** Destinazione alternativa della console (la UI interattiva). */
+/** Alternative console destination (the interactive UI). */
 export interface ConsoleSink {
   write(line: ConsoleLine): void;
 }
@@ -70,13 +70,13 @@ export class Logger {
     this.sink = sink;
   }
 
-  /** Mostra i dettagli del detector a ogni check (toggle da tastiera). */
+  /** Shows detector details on every check (keyboard toggle). */
   toggleDetails(): boolean {
     this.showDetails = !this.showDetails;
     return this.showDetails;
   }
 
-  /** Solo su file: per informazioni che la UI mostra già in altra forma. */
+  /** File only: for information the UI already shows in another form. */
   record(msg: string): void {
     this.appendToFile(redact(`${formatTimestamp()} | ${msg}`));
   }
@@ -94,7 +94,7 @@ export class Logger {
     this.write("error", err === undefined ? msg : `${msg}: ${describeError(err)}`);
   }
 
-  /** Riga di check: "data | STATO | testo (durata)". */
+  /** Check line: "date | STATE | text (duration)". */
   check(state: string, text: string, durationMs: number): void {
     const duration = `(${durationMs} ms)`;
     this.write("info", `${state.padEnd(13)} | ${text} ${duration}`, {
@@ -104,12 +104,12 @@ export class Logger {
   }
 
   transition(from: string, to: string): void {
-    this.write("info", `Transizione ${from} -> ${to}`, {
-      console: `${paint("bold", "↳ Transizione")} ${paint(STATE_STYLE[from], from)} → ${paint(STATE_STYLE[to], to)}`,
+    this.write("info", `Transition ${from} -> ${to}`, {
+      console: `${paint("bold", "↳ Transition")} ${paint(STATE_STYLE[from], from)} → ${paint(STATE_STYLE[to], to)}`,
     });
   }
 
-  /** Dettaglio dei segnali del detector: visibile a info, altrimenti solo in debug. */
+  /** Detector signal details: visible at info, otherwise only at debug. */
   detail(msg: string, visible: boolean): void {
     this.write(visible || this.showDetails ? "info" : "debug", `  ${msg}`, { console: paint("dim", `  ${msg}`) });
   }
@@ -136,9 +136,9 @@ export class Logger {
       this.rotateIfNeeded(this.filePath);
       appendFileSync(this.filePath, line + "\n");
     } catch (err) {
-      // Un problema sul file di log non deve mai fermare il watcher.
+      // A log file problem must never stop the watcher.
       this.fileBroken = true;
-      console.error(`Log su file disabilitato: ${describeError(err)}`);
+      console.error(`File logging disabled: ${describeError(err)}`);
     }
   }
 
@@ -151,7 +151,7 @@ export class Logger {
   }
 }
 
-/** Applica lo stile solo se lo stream è un terminale che supporta i colori (rispetta NO_COLOR). */
+/** Applies the style only if the stream is a color-capable terminal (honors NO_COLOR). */
 export function paint(style: Style | null | undefined, text: string, stream: NodeJS.WriteStream = process.stdout): string {
   return style ? styleText(style, text, { stream }) : text;
 }

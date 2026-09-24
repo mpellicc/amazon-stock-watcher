@@ -15,19 +15,19 @@ export interface WatcherOptions {
 export interface CheckOutcome {
   state: WatcherState;
   result?: AvailabilityResult;
-  /** Testo sintetico per la riga di log. */
+  /** Short text for the log line. */
   summary: string;
   durationMs: number;
 }
 
-// Attesa dopo domcontentloaded: il buybox a volte viene idratato via JS.
+// Wait after domcontentloaded: the buybox is sometimes hydrated via JS.
 const CONTENT_SELECTOR = "#productTitle, #captchacharacters, form[action*='validateCaptcha']";
 const BUYBOX_SELECTOR = "#availability, #add-to-cart-button, #buy-now-button, #outOfStock, #buybox";
 const HEAVY_RESOURCES = new Set(["image", "media", "font"]);
 
 /**
- * Tiene vivo un Chromium con profilo persistente e controlla la pagina prodotto.
- * Nessuna interazione con la pagina: solo navigazione e lettura del DOM.
+ * Keeps a Chromium with a persistent profile alive and checks the product page.
+ * No interaction with the page: navigation and DOM reading only.
  */
 export class AmazonWatcher {
   private context: BrowserContext | null = null;
@@ -39,18 +39,18 @@ export class AmazonWatcher {
 
   async start(): Promise<void> {
     await this.close();
-    logger.info(`Avvio Chromium (headless=${this.opts.headless})`);
-    // Contesto persistente: cookie/consenso restano tra i riavvii (sessione normale di un utente).
+    logger.info(`Starting Chromium (headless=${this.opts.headless})`);
+    // Persistent context: cookies/consent survive restarts (a normal user session).
     const context = await chromium.launchPersistentContext(this.opts.profileDir, {
       headless: this.opts.headless,
       locale: "it-IT",
       timezoneId: "Europe/Rome",
       viewport: { width: 1366, height: 900 },
-      // Lo shutdown lo gestisce index.ts: Playwright altrimenti fa process.exit(130) al primo SIGINT.
+      // Shutdown is handled by index.ts: otherwise Playwright calls process.exit(130) on the first SIGINT.
       handleSIGINT: false,
       handleSIGTERM: false,
     });
-    context.on("close", () => this.markBroken("contesto browser chiuso"));
+    context.on("close", () => this.markBroken("browser context closed"));
     context.setDefaultNavigationTimeout(this.opts.navigationTimeoutMs);
     context.setDefaultTimeout(this.opts.navigationTimeoutMs);
 
@@ -61,46 +61,46 @@ export class AmazonWatcher {
     }
 
     const page = context.pages()[0] ?? (await context.newPage());
-    page.on("crash", () => this.markBroken("pagina crashata"));
-    page.on("close", () => this.markBroken("pagina chiusa"));
+    page.on("crash", () => this.markBroken("page crashed"));
+    page.on("close", () => this.markBroken("page closed"));
 
     this.context = context;
     this.page = page;
     this.broken = false;
   }
 
-  /** true se browser/pagina vanno ricreati prima del prossimo check. */
+  /** true if browser/page must be recreated before the next check. */
   needsRestart(): boolean {
     return this.broken || !this.context || !this.page || this.page.isClosed();
   }
 
   /**
-   * Naviga all'URL del prodotto e classifica la pagina.
-   * Usa goto (non reload): se Amazon ci ha rediretti a CAPTCHA/errore, torniamo comunque al prodotto.
+   * Navigates to the product URL and classifies the page.
+   * Uses goto (not reload): if Amazon redirected us to a CAPTCHA/error page, we still go back to the product.
    */
   async check(): Promise<CheckOutcome> {
     const started = Date.now();
     const page = this.page;
     if (!page || this.needsRestart()) {
-      return { state: "UNKNOWN", summary: "Browser non disponibile", durationMs: 0 };
+      return { state: "UNKNOWN", summary: "Browser not available", durationMs: 0 };
     }
 
     try {
       const response = await page.goto(this.opts.url, { waitUntil: "domcontentloaded" });
       const status = response?.status();
-      if (status && status >= 500) logger.debug(`HTTP ${status} da Amazon`);
+      if (status && status >= 500) logger.debug(`HTTP ${status} from Amazon`);
       return await this.classifyCurrentPage(started);
     } catch (err) {
       const message = describeError(err);
       if (this.needsRestart() || /Target (page, context or browser )?closed|Browser has been closed/i.test(message)) {
         this.markBroken(message);
-        return { state: "UNKNOWN", summary: `Browser non disponibile: ${message}`, durationMs: Date.now() - started };
+        return { state: "UNKNOWN", summary: `Browser not available: ${message}`, durationMs: Date.now() - started };
       }
       return { state: "NETWORK_ERROR", summary: message, durationMs: Date.now() - started };
     }
   }
 
-  /** Classifica la pagina attuale senza navigare (usato mentre si è BLOCKED). */
+  /** Classifies the current page without navigating (used while BLOCKED). */
   async inspectCurrentPage(): Promise<CheckOutcome> {
     const started = Date.now();
     try {
@@ -119,7 +119,7 @@ export class AmazonWatcher {
     try {
       await context.close();
     } catch (err) {
-      logger.debug(`Chiusura browser: ${describeError(err)}`);
+      logger.debug(`Closing browser: ${describeError(err)}`);
     } finally {
       this.closing = false;
     }
@@ -127,7 +127,7 @@ export class AmazonWatcher {
 
   private async classifyCurrentPage(started: number): Promise<CheckOutcome> {
     const page = this.page;
-    if (!page) throw new Error("Pagina non inizializzata");
+    if (!page) throw new Error("Page not initialized");
 
     await page.waitForSelector(CONTENT_SELECTOR, { timeout: 10_000 }).catch(() => undefined);
     await page.waitForSelector(BUYBOX_SELECTOR, { timeout: 3_000 }).catch(() => undefined);
@@ -137,15 +137,15 @@ export class AmazonWatcher {
     try {
       result = detectAvailability(html, { expectedAsin: this.opts.asin });
     } catch (err) {
-      // Un errore di parsing non è un problema di rete: la pagina è semplicemente anomala.
-      return { state: "UNKNOWN", summary: `Parsing fallito: ${describeError(err)}`, durationMs: Date.now() - started };
+      // A parsing error is not a network problem: the page is simply anomalous.
+      return { state: "UNKNOWN", summary: `Parsing failed: ${describeError(err)}`, durationMs: Date.now() - started };
     }
     return { state: result.state, result, summary: summarize(result), durationMs: Date.now() - started };
   }
 
   private markBroken(reason: string): void {
     if (this.closing) return;
-    if (!this.broken) logger.warn(`Browser da ricreare: ${reason}`);
+    if (!this.broken) logger.warn(`Browser needs to be recreated: ${reason}`);
     this.broken = true;
   }
 }

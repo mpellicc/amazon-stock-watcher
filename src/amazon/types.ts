@@ -1,7 +1,7 @@
-/** Esito della classificazione di una singola pagina. */
+/** Outcome of classifying a single page. */
 export type DetectedState = "AVAILABLE" | "UNAVAILABLE" | "BLOCKED" | "UNKNOWN";
 
-/** Stato completo del watcher: include gli stati tecnici non derivabili dalla pagina. */
+/** Full watcher state: also includes technical states that cannot be derived from the page. */
 export type WatcherState = "STARTING" | DetectedState | "NETWORK_ERROR";
 
 export interface AvailabilitySignals {
@@ -17,9 +17,9 @@ export interface AvailabilityResult {
   state: DetectedState;
   title?: string;
   availabilityText?: string;
-  /** Etichetta del bottone d'acquisto più rilevante (es. "Preordina ora"). */
+  /** Label of the most relevant purchase button (e.g. "Preordina ora"). */
   buttonLabel?: string;
-  /** Venditore mostrato nel buybox, se identificabile. */
+  /** Seller shown in the buybox, when identifiable. */
   merchant?: string;
   signals: AvailabilitySignals;
   reason: string;

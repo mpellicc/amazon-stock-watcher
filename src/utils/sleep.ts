@@ -1,4 +1,4 @@
-/** Sleep interrompibile: risolve subito se il segnale viene abortito (shutdown). */
+/** Abortable sleep: resolves immediately when the signal is aborted (shutdown). */
 export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
     if (signal?.aborted) return resolve();
@@ -12,7 +12,7 @@ export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-/** Intero casuale uniforme in [min, max]. */
+/** Uniform random integer in [min, max]. */
 export function randomBetween(min: number, max: number): number {
   return Math.floor(min + Math.random() * (max - min + 1));
 }

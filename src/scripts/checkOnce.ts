@@ -1,18 +1,23 @@
 /**
- * Singolo controllo della pagina reale, senza notifiche né modifica dello stato.
- * Utile per verificare la detection: npm run test:amazon (-- -p <url> per un altro prodotto, -- --headed per vedere il browser).
+ * Single check of the real page, with no notifications and no state changes.
+ * Useful to verify detection: npm run test:amazon (-- -p <url> for another product, -- --headed to see the browser).
  */
 import { AmazonWatcher } from "../amazon/AmazonWatcher.js";
 import { explainResult } from "../amazon/availabilityDetector.js";
-import { resolveProductUrl } from "../cli.js";
-import { ConfigError, loadConfig } from "../config.js";
+import { defaultProductUrl, parseCliArgs, promptProductUrl } from "../cli.js";
+import { ConfigError, loadConfig, withProduct } from "../config.js";
 
 try {
-  const config = loadConfig({ requireTelegram: false, productUrl: await resolveProductUrl() });
+  const args = parseCliArgs();
+  let config = loadConfig({ requireTelegram: false, productUrl: args.product, requireProduct: false });
+  if (!config.asin) {
+    if (!process.stdin.isTTY) throw new ConfigError(["No product: pass -p <url> or set AMAZON_URL in .env"]);
+    config = withProduct(config, await promptProductUrl(defaultProductUrl()));
+  }
   const watcher = new AmazonWatcher({
     url: config.amazonUrl,
     asin: config.asin,
-    headless: process.argv.includes("--headed") ? false : config.headless,
+    headless: args.headed ? false : config.headless,
     navigationTimeoutMs: config.navigationTimeoutMs,
     blockHeavyResources: config.blockHeavyResources,
     profileDir: config.paths.browserProfileDir,
@@ -21,8 +26,8 @@ try {
   const outcome = await watcher.check();
   await watcher.close();
 
-  console.log(`\nStato:  ${outcome.state}  (${outcome.durationMs} ms)`);
-  console.log(`Titolo: ${outcome.result?.title ?? "-"}`);
+  console.log(`\nState:  ${outcome.state}  (${outcome.durationMs} ms)`);
+  console.log(`Title:  ${outcome.result?.title ?? "-"}`);
   console.log(outcome.result ? explainResult(outcome.result).replaceAll('" ', '"\n') : outcome.summary);
   process.exit(0);
 } catch (err) {

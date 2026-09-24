@@ -2,15 +2,17 @@ import { parseHTML } from "linkedom";
 import type { AvailabilityResult, AvailabilitySignals } from "./types.js";
 
 /*
- * Il detector lavora sull'HTML renderizzato da Chromium (page.content()), così la stessa
- * funzione gira in produzione e nei test con fixture locali, senza browser.
+ * The detector works on the HTML rendered by Chromium (page.content()), so the same
+ * function runs in production and in tests against local fixtures, with no browser.
  *
- * Regola d'oro: AVAILABLE solo con evidenza positiva (un bottone d'acquisto attivo nel
- * buybox del prodotto giusto). Nel dubbio: UNKNOWN.
+ * Golden rule: AVAILABLE only with positive evidence (an active purchase button in the
+ * buybox of the right product). When in doubt: UNKNOWN.
+ *
+ * The text patterns below intentionally match both Italian and English Amazon pages.
  */
 
-// Contenitori del buybox: la ricerca testuale dei bottoni è limitata a queste aree,
-// perché "Aggiungi al carrello" compare anche nei caroselli di altri prodotti.
+// Buybox containers: the text search for buttons is limited to these areas,
+// because "Aggiungi al carrello" / "Add to Cart" also appears in carousels of other products.
 const BUYBOX_SELECTORS = [
   "#buybox",
   "#desktop_buybox",
@@ -62,7 +64,7 @@ type El = NonNullable<ReturnType<Doc["querySelector"]>>;
 
 export function detectAvailability(html: string, options: DetectOptions = {}): AvailabilityResult {
   const { document } = parseHTML(html);
-  // Script/style contengono testo che non è visibile (e a volte la parola "captcha").
+  // Script/style contain text that is not visible (and sometimes the word "captcha").
   for (const el of document.querySelectorAll("script, style, noscript, template")) el.remove();
 
   const title = textOf(document.querySelector("#productTitle")) || undefined;
@@ -108,7 +110,7 @@ export function detectAvailability(html: string, options: DetectOptions = {}): A
   return { ...base, state: "UNKNOWN", reason: "No availability info and no buybox found" };
 }
 
-/** Riga di log spiegabile: stato + segnali. */
+/** Explainable log line: state + signals. */
 export function explainResult(r: AvailabilityResult): string {
   const s = r.signals;
   return [
@@ -134,7 +136,7 @@ function findPurchaseButtons(document: Doc): ButtonScan {
     if (label && (!scan.label || RE_PREORDER.test(label))) scan.label = label;
   };
 
-  // 1) ID/name noti di Amazon (univoci nella pagina prodotto).
+  // 1) Known Amazon IDs/names (unique on the product page).
   for (const el of queryAll(document, ADD_TO_CART_IDS)) {
     if (!isUsable(el)) continue;
     const label = buttonLabel(document, el);
@@ -155,7 +157,7 @@ function findPurchaseButtons(document: Doc): ButtonScan {
     note(buttonLabel(document, el) || "Preordina ora");
   }
 
-  // 2) Fallback testuale, solo dentro il buybox (resiste a cambi di ID).
+  // 2) Text fallback, only inside the buybox (survives ID changes).
   for (const box of queryAll(document, BUYBOX_SELECTORS)) {
     for (const el of box.querySelectorAll(CLICKABLE)) {
       if (!isUsable(el)) continue;
@@ -190,7 +192,7 @@ function buttonLabel(document: Doc, el: El): string {
   ];
   for (const c of candidates) {
     const t = normalize(c ?? "");
-    // value="Submit"/"1" non è un'etichetta utile.
+    // value="Submit"/"1" is not a useful label.
     if (t && !/^(submit|\d+)$/i.test(t)) return t;
   }
   return "";
@@ -204,13 +206,13 @@ function isUsable(el: El): boolean {
 }
 
 function detectCaptcha(document: Doc, hasProductTitle: boolean): boolean {
-  // Segnali strutturali: affidabili anche se la pagina contiene altro.
+  // Structural signals: reliable even if the page contains other things.
   if (document.querySelector('form[action*="validateCaptcha"], #captchacharacters, input[name="amzn-captcha-verify"]')) {
     return true;
   }
-  // Segnali testuali: solo se non siamo su una pagina prodotto vera.
+  // Text signals: only if we are not on an actual product page.
   if (hasProductTitle) return false;
-  // querySelector invece di document.title/body: su HTML malformato linkedom non ha documentElement.
+  // querySelector instead of document.title/body: on malformed HTML linkedom has no documentElement.
   const haystack = `${textOf(document.querySelector("title"))} ${textOf(document.querySelector("body")).slice(0, 5000)}`;
   return CAPTCHA_TEXT_PATTERNS.some((re) => re.test(haystack));
 }

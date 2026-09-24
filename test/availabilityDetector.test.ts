@@ -8,7 +8,7 @@ const fixture = (name: string): string => readFileSync(join(import.meta.dirname,
 const detect = (name: string) => detectAvailability(fixture(name), { expectedAsin: ASIN });
 
 describe("detectAvailability", () => {
-  it("prodotto non disponibile → UNAVAILABLE (ignora bottone nascosto e carosello)", () => {
+  it("unavailable product → UNAVAILABLE (ignores hidden button and carousel)", () => {
     const r = detect("unavailable.html");
     expect(r.state).toBe("UNAVAILABLE");
     expect(r.title).toBe("Console Gaming Edizione Standard");
@@ -31,7 +31,7 @@ describe("detectAvailability", () => {
     expect(r.merchant).toBe("Amazon.it");
   });
 
-  it("preorder → AVAILABLE con preorder=true", () => {
+  it("preorder → AVAILABLE with preorder=true", () => {
     const r = detect("available-preorder.html");
     expect(r.state).toBe("AVAILABLE");
     expect(r.signals).toMatchObject({ preorder: true, addToCart: false, buyNow: false, availabilityPositive: true });
@@ -39,7 +39,7 @@ describe("detectAvailability", () => {
     expect(r.reason).toBe("Preorder button detected");
   });
 
-  it("preorder in inglese con ID cambiati → AVAILABLE tramite fallback testuale nel buybox", () => {
+  it("English preorder with changed IDs → AVAILABLE via text fallback in the buybox", () => {
     const r = detectAvailability(fixture("preorder-english-renamed-ids.html"));
     expect(r.state).toBe("AVAILABLE");
     expect(r.signals.preorder).toBe(true);
@@ -51,43 +51,43 @@ describe("detectAvailability", () => {
     expect(r.signals.captchaDetected).toBe(true);
   });
 
-  it("Robot Check solo testuale → BLOCKED", () => {
+  it("text-only Robot Check → BLOCKED", () => {
     expect(detect("robot-check-text-only.html").state).toBe("BLOCKED");
   });
 
-  it("pagina incompleta (senza titolo) → UNKNOWN anche se c'è un bottone", () => {
+  it("incomplete page (no title) → UNKNOWN even with a button", () => {
     const r = detect("incomplete.html");
     expect(r.state).toBe("UNKNOWN");
     expect(r.state).not.toBe("AVAILABLE");
   });
 
-  it("pagina d'errore Amazon → UNKNOWN", () => {
+  it("Amazon error page → UNKNOWN", () => {
     expect(detect("error-page.html").state).toBe("UNKNOWN");
   });
 
-  it("HTML vuoto o spazzatura → UNKNOWN", () => {
+  it("empty or garbage HTML → UNKNOWN", () => {
     expect(detectAvailability("", { expectedAsin: ASIN }).state).toBe("UNKNOWN");
     expect(detectAvailability("<<<not html", { expectedAsin: ASIN }).state).toBe("UNKNOWN");
   });
 
-  it("segnali in conflitto (testo negativo + bottone) → UNKNOWN", () => {
+  it("conflicting signals (negative text + button) → UNKNOWN", () => {
     expect(detect("conflicting.html").state).toBe("UNKNOWN");
   });
 
-  it("bottoni disabilitati → UNAVAILABLE", () => {
+  it("disabled buttons → UNAVAILABLE", () => {
     const r = detect("disabled-buttons.html");
     expect(r.state).toBe("UNAVAILABLE");
     expect(r.signals.addToCart).toBe(false);
     expect(r.signals.buyNow).toBe(false);
   });
 
-  it("ASIN diverso (redirect a variante) → UNKNOWN", () => {
+  it("different ASIN (redirect to a variant) → UNKNOWN", () => {
     const r = detect("other-asin.html");
     expect(r.state).toBe("UNKNOWN");
     expect(r.reason).toContain("ASIN mismatch");
   });
 
-  it("la parola 'captcha' negli script di una pagina prodotto non causa BLOCKED", () => {
+  it("the word 'captcha' in product page scripts does not cause BLOCKED", () => {
     expect(detect("unavailable.html").signals.captchaDetected).toBe(false);
   });
 });

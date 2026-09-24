@@ -5,8 +5,8 @@ import { logger } from "../utils/logger.js";
 import { recapMessage } from "./messages.js";
 
 /**
- * Recap periodico su Telegram. Ogni recap programmato copre il periodo dall'ultimo recap;
- * un /recap manuale mostra lo stesso periodo senza azzerarlo.
+ * Periodic Telegram recap. Each scheduled recap covers the period since the previous one;
+ * a manual /recap shows the same period without resetting it.
  */
 export class Recapper {
   private timer: NodeJS.Timeout | null = null;
@@ -36,14 +36,14 @@ export class Recapper {
     this.nextAt = null;
   }
 
-  /** Nuovo intervallo, conteggiato da adesso. 0 = disattivato. Vale fino al riavvio. */
+  /** New interval, counted from now. 0 = disabled. Lasts until restart. */
   setIntervalHours(hours: number): void {
     this.intervalHours = hours;
-    logger.info(hours > 0 ? `Recap ogni ${hours} h` : "Recap periodico disattivato");
+    logger.info(hours > 0 ? `Recap every ${hours} h` : "Periodic recap disabled");
     this.schedule();
   }
 
-  /** Testo del recap per il periodo corrente. */
+  /** Recap text for the current period. */
   build(): string {
     return recapMessage({
       now: new Date(),
@@ -68,11 +68,11 @@ export class Recapper {
   }
 
   private async sendScheduled(): Promise<void> {
-    this.schedule(); // prima di build(), così il messaggio riporta l'orario del prossimo recap
+    this.schedule(); // before build(), so the message reports when the next recap is due
     const text = this.build();
     this.periodStart = { at: Date.now(), stats: { ...this.monitor.stats } };
     const sent = await this.telegram.sendWithAmazonButton(text);
-    logger.info(`Recap periodico ${sent ? "inviato" : "NON inviato"} su Telegram`);
+    logger.info(`Periodic recap ${sent ? "sent" : "NOT sent"} to Telegram`);
   }
 }
 

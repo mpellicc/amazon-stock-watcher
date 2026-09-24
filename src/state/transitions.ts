@@ -1,19 +1,19 @@
 import type { WatcherState } from "../amazon/types.js";
 
-/** Stato persistito su disco: sopravvive ai riavvii. */
+/** State persisted to disk: survives restarts. */
 export interface PersistedState {
   lastState: WatcherState;
   lastCheck: string | null;
   lastAvailableAt: string | null;
   lastNotificationAt: string | null;
   /**
-   * true = una transizione verso AVAILABLE genera una notifica.
-   * Si disarma dopo la notifica e si riarma solo osservando UNAVAILABLE:
-   * così AVAILABLE -> NETWORK_ERROR -> AVAILABLE (o un riavvio) non manda doppioni.
+   * true = a transition to AVAILABLE triggers a notification.
+   * Disarmed after the notification, re-armed only when UNAVAILABLE is observed:
+   * so AVAILABLE -> NETWORK_ERROR -> AVAILABLE (or a restart) sends no duplicates.
    */
   armed: boolean;
   consecutiveProblems: number;
-  /** Tipo di problema già notificato nell'episodio in corso (null = nessuno). */
+  /** Problem kind already notified in the current episode (null = none). */
   problemAlertKind: ProblemState | null;
   lastTechnicalNotificationAt: string | null;
 }
@@ -21,7 +21,7 @@ export interface PersistedState {
 export type ProblemState = "BLOCKED" | "NETWORK_ERROR" | "UNKNOWN";
 
 export interface TechnicalPolicy {
-  /** Problemi consecutivi (rete/pagina anomala) prima di un alert. BLOCKED avvisa subito. */
+  /** Consecutive problems (network/anomalous page) before an alert. BLOCKED alerts immediately. */
   problemAlertThreshold: number;
   cooldownMs: number;
 }
@@ -32,9 +32,9 @@ export interface TransitionDecision {
   changed: boolean;
   notifyAvailable: boolean;
   technicalAlert: ProblemState | null;
-  /** Fine di un episodio di problemi per cui era partito un alert tecnico. */
+  /** End of a problem episode for which a technical alert was sent. */
   recoveredAfterAlert: boolean;
-  /** Fine di un episodio di problemi (anche senza alert): utile per il log. */
+  /** End of a problem episode (even without an alert): useful for logging. */
   recovered: boolean;
 }
 
@@ -55,7 +55,7 @@ export function isProblem(state: WatcherState): state is ProblemState {
   return state === "BLOCKED" || state === "NETWORK_ERROR" || state === "UNKNOWN";
 }
 
-/** Funzione pura: dato lo stato precedente e l'osservazione, decide cosa fare. */
+/** Pure function: given the previous state and the observation, decides what to do. */
 export function applyObservation(
   prev: PersistedState,
   observed: WatcherState,
@@ -100,12 +100,12 @@ export function applyObservation(
   };
 }
 
-/** Da chiamare solo se la notifica di disponibilità è stata consegnata. */
+/** Call only if the availability notification was delivered. */
 export function markAvailableNotified(state: PersistedState, now: Date): PersistedState {
   return { ...state, armed: false, lastNotificationAt: now.toISOString() };
 }
 
-/** Da chiamare solo se l'alert tecnico è stato consegnato. */
+/** Call only if the technical alert was delivered. */
 export function markTechnicalNotified(state: PersistedState, kind: ProblemState, now: Date): PersistedState {
   return { ...state, problemAlertKind: kind, lastTechnicalNotificationAt: now.toISOString() };
 }

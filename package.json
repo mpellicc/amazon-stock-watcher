@@ -2,7 +2,8 @@
   "name": "amazon-stock-watcher",
   "version": "1.0.0",
   "private": true,
-  "description": "Watcher locale di disponibilità Amazon.it con notifiche Telegram (nessun acquisto automatico).",
+  "description": "Local Amazon availability watcher with Telegram notifications (no automatic purchases).",
+  "author": "mpellicc (https://github.com/mpellicc)",
   "type": "module",
   "engines": {
     "node": ">=22"

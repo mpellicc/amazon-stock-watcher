@@ -1,4 +1,4 @@
-/** Sequenze ANSI minime e helper di misura/formattazione per il terminale. */
+/** Minimal ANSI sequences and measuring/formatting helpers for the terminal. */
 
 export const ansi = {
   clearScreen: "\x1b[2J\x1b[3J\x1b[H",
@@ -16,14 +16,14 @@ export function stripAnsi(text: string): string {
   return text.replace(ANSI_PATTERN, "");
 }
 
-/** Larghezza visibile approssimata: emoji (presentazione grafica) doppie, simboli come ✔ singoli. */
+/** Approximate visible width: emoji (graphic presentation) count double, symbols like ✔ single. */
 export function visibleWidth(text: string): number {
   let width = 0;
   for (const ch of stripAnsi(text)) width += /\p{Emoji_Presentation}/u.test(ch) ? 2 : 1;
   return width;
 }
 
-/** Tronca alla larghezza del terminale mantenendo i colori (le sequenze ANSI non occupano spazio). */
+/** Truncates to the terminal width keeping colors (ANSI sequences take no space). */
 export function fit(text: string, columns: number): string {
   if (visibleWidth(text) <= columns) return text;
   let out = "";
@@ -53,13 +53,13 @@ export function formatDuration(ms: number): string {
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
   const s = totalSec % 60;
-  if (h >= 24) return `${Math.floor(h / 24)}g ${h % 24}h`;
+  if (h >= 24) return `${Math.floor(h / 24)}d ${h % 24}h`;
   if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
   if (m > 0) return `${m}m ${String(s).padStart(2, "0")}s`;
   return `${s}s`;
 }
 
-/** Riquadro con bordi arrotondati. Le righe troppo lunghe vengono troncate. */
+/** Box with rounded borders. Lines that are too long get truncated. */
 export function box(lines: string[], options: { title?: string; columns: number; paint?: (s: string) => string }): string {
   const paint = options.paint ?? ((s: string) => s);
   const maxInner = Math.max(10, options.columns - 4);

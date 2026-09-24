@@ -6,23 +6,26 @@ import { parseProductUrl } from "./config.js";
 
 const LAST_PRODUCT_FILE = "data/last-product.txt";
 
-/**
- * Sceglie l'URL del prodotto: flag -p/--product → richiesta interattiva (solo da terminale,
- * Invio = ultimo usato o AMAZON_URL) → undefined (loadConfig userà AMAZON_URL o darà errore).
- */
-export async function resolveProductUrl(argv: string[] = process.argv.slice(2)): Promise<string | undefined> {
+export interface CliArgs {
+  product?: string;
+  headed: boolean;
+}
+
+/** Parses -p/--product and --headed. Throws on an invalid product URL. */
+export function parseCliArgs(argv: string[] = process.argv.slice(2)): CliArgs {
   const { values } = parseArgs({
     args: argv,
     options: { product: { type: "string", short: "p" }, headed: { type: "boolean" } },
     strict: false,
   });
-  const fromFlag = typeof values.product === "string" ? values.product : undefined;
-  if (fromFlag) {
-    if (!parseProductUrl(fromFlag)) throw new Error(`URL non valido per --product: "${fromFlag}"`);
-    return fromFlag;
-  }
-  if (!process.stdin.isTTY || !process.stdout.isTTY) return undefined;
-  return promptProductUrl(readLastProduct() ?? process.env.AMAZON_URL?.trim() ?? "");
+  const product = typeof values.product === "string" ? values.product : undefined;
+  if (product !== undefined && !parseProductUrl(product)) throw new Error(`Invalid URL for --product: "${product}"`);
+  return { product, headed: values.headed === true };
+}
+
+/** Default offered by the prompt: last product used, otherwise AMAZON_URL. */
+export function defaultProductUrl(): string {
+  return readLastProduct() ?? process.env.AMAZON_URL?.trim() ?? "";
 }
 
 export function rememberProduct(url: string): void {
@@ -30,18 +33,28 @@ export function rememberProduct(url: string): void {
     mkdirSync(dirname(LAST_PRODUCT_FILE), { recursive: true });
     writeFileSync(LAST_PRODUCT_FILE, url + "\n");
   } catch {
-    // Solo una comodità per la prossima richiesta: se fallisce, pazienza.
+    // Just a convenience for the next prompt: failing is fine.
   }
 }
 
-async function promptProductUrl(fallback: string): Promise<string> {
+/**
+ * Asks for the product URL until a valid one is entered (Enter = fallback).
+ * Ctrl+C during the prompt exits the process: nothing has been started yet.
+ */
+export async function promptProductUrl(fallback: string, options: { indent?: string; label?: string } = {}): Promise<string> {
+  const indent = options.indent ?? "";
   const rl = createInterface({ input: process.stdin, output: process.stdout });
+  rl.on("SIGINT", () => {
+    rl.close();
+    process.stdout.write("\n");
+    process.exit(130);
+  });
   try {
     for (;;) {
       const hint = fallback ? ` [${fallback}]` : "";
-      const answer = (await rl.question(`URL prodotto Amazon${hint}: `)).trim() || fallback;
+      const answer = (await rl.question(`${indent}${options.label ?? "Amazon product URL"}${hint}: `)).trim() || fallback;
       if (answer && parseProductUrl(answer)) return answer;
-      console.log("  URL non valido: serve un link https di Amazon che contenga /dp/<ASIN>.");
+      process.stdout.write(`${indent}  Invalid URL: an https Amazon link containing /dp/<ASIN> is required.\n`);
     }
   } finally {
     rl.close();

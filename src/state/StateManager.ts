@@ -6,7 +6,7 @@ import { initialState, type PersistedState } from "./transitions.js";
 
 const VALID_STATES: WatcherState[] = ["STARTING", "UNKNOWN", "UNAVAILABLE", "AVAILABLE", "BLOCKED", "NETWORK_ERROR"];
 
-/** Persistenza JSON con scrittura atomica (file temporaneo + rename). */
+/** JSON persistence with atomic writes (temp file + rename). */
 export class StateManager {
   private state: PersistedState;
 
@@ -29,7 +29,7 @@ export class StateManager {
       const raw: unknown = JSON.parse(readFileSync(this.filePath, "utf8"));
       return sanitize(raw);
     } catch (err) {
-      logger.warn(`State file illeggibile, riparto da zero: ${describeError(err)}`);
+      logger.warn(`Unreadable state file, starting fresh: ${describeError(err)}`);
       return initialState();
     }
   }
@@ -41,13 +41,13 @@ export class StateManager {
       writeFileSync(tmp, JSON.stringify(this.state, null, 2) + "\n");
       renameSync(tmp, this.filePath);
     } catch (err) {
-      // Lo stato in memoria resta valido: il watcher continua.
-      logger.error("Salvataggio stato fallito", err);
+      // The in-memory state stays valid: the watcher keeps going.
+      logger.error("Saving state failed", err);
     }
   }
 }
 
-/** Accetta solo campi noti e ben tipizzati; il resto torna ai default. */
+/** Accepts only known, well-typed fields; everything else falls back to defaults. */
 function sanitize(raw: unknown): PersistedState {
   const base = initialState();
   if (typeof raw !== "object" || raw === null) return base;
