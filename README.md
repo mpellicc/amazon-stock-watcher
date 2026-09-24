@@ -5,12 +5,11 @@ A local watcher that keeps a real Chromium open (Playwright), checks an Amazon p
 when the product goes from _not purchasable_ to _purchasable/pre-orderable_. You can query it remotely with bot
 commands (`/recap`, `/check`) and it sends a periodic recap.
 
+> [!IMPORTANT]
 > **It never buys anything.** No login, cart, checkout or automatic purchase.
 > No CAPTCHA bypass, stealth, proxies or fingerprint spoofing: if Amazon asks for a verification the watcher goes `BLOCKED` and tells you.
 
 The product is chosen at startup (see [Choosing the product](#choosing-the-product)).
-
-Developed by [@mpellicc](https://github.com/mpellicc).
 
 ---
 
