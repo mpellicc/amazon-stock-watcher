@@ -3,7 +3,7 @@
 🇬🇧 [English](README.md) | 🇮🇹 **Italiano**
 
 ![TypeScript](https://img.shields.io/badge/language-TypeScript-3178c6?logo=typescript&logoColor=white)
-![Node.js](https://img.shields.io/badge/node-%3E%3D22-43853d?logo=node.js&logoColor=white)
+![Node.js](https://img.shields.io/badge/node-%3E%3D26.10-43853d?logo=node.js&logoColor=white)
 ![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)
 ![Last Commit](https://img.shields.io/github/last-commit/mpellicc/amazon-stock-watcher)
 ![GitHub Stars](https://img.shields.io/github/stars/mpellicc/amazon-stock-watcher?style=flat)
@@ -31,7 +31,7 @@ Il prodotto viene scelto all'avvio (vedi [Scelta del prodotto](#scelta-del-prodo
 
 ## Requisiti
 
-- **Node.js 22+** (testato con Node 24 LTS)
+- **Node.js 26.10+** (fissato in `.nvmrc`: esegui `nvm use` nella cartella del progetto)
 - **Chromium di Playwright** (`npx playwright install chromium`)
 - Un **bot Telegram** e il tuo `chat_id`
 
