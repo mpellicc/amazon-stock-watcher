@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 /** App metadata shown in the terminal and in the logs. */
 export const APP_NAME = "Amazon Stock Watcher";
 export const AUTHOR = "@mpellicc";
+export const AUTHOR_URL = "https://github.com/mpellicc";
 export const REPO_URL = "https://github.com/mpellicc/amazon-stock-watcher";
 
 // package.json sits one level above both src/ (tsx) and dist/ (build).

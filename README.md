@@ -63,7 +63,7 @@ Alternatively, write to **@userinfobot**, which replies with your id.
 | `OPEN_BROWSER_ON_AVAILABLE`                     | `false`          | Opens the URL in the default browser                                               |
 | `TECHNICAL_NOTIFICATION_COOLDOWN_MINUTES`       | `30`             | Minimum gap between two technical alerts                                           |
 | `RECAP_INTERVAL_HOURS`                          | `4`              | Telegram recap every N hours (`0` = disabled). Can be changed live with `/recap N` |
-| `STARTUP_ANIMATION`                             | `true`           | Startup animation in the terminal                                                  |
+| `STARTUP_ANIMATION`                             | `true`           | Full-window startup animation in the terminal (Enter skips it)                     |
 | `LOG_LEVEL`                                     | `info`           | `debug` shows the detector signals on every check                                  |
 | `PROBLEM_ALERT_THRESHOLD`                       | `6`              | Consecutive errors before a technical alert (~1 min)                               |
 | `NAVIGATION_TIMEOUT_MS`                         | `30000`          | Navigation timeout                                                                 |
@@ -124,7 +124,7 @@ npm run test:amazon     # a single real check, prints state and signals (-- -p <
 
 When started from an interactive terminal (`npm run dev`, `npm start`):
 
-- startup: animated logo, then the product URL prompt (skipped with `-p`), then a checklist tied to real events and a configuration summary. With `-p` the checks start right away, in parallel with the animation. Any key skips the animation; `STARTUP_ANIMATION=false` disables it;
+- startup: a full-window splash animation (radar, logo decoding, credits; about 2 s, on the terminal's alternate screen so your scrollback is untouched), then a compact header, the product URL prompt (skipped with `-p`), a checklist tied to real events and a configuration summary. With `-p` the checks start right away, in parallel with the animation. **Enter** skips the animation; `STARTUP_ANIMATION=false` disables it, and it is not shown on terminals smaller than 60×18;
 - status line at the bottom with next check, state, number of checks, uptime and key legend (it shortens on narrow terminals);
 - identical consecutive checks collapsed into a single line (`×42 since 17:41:03`). The log file stays complete;
 - window/tab title showing the state (⚪ UNAVAILABLE, 🟢 AVAILABLE!, 🟣 BLOCKED…);
@@ -202,7 +202,8 @@ src/
 │   └── messages.ts              # message texts
 ├── ui/
 │   ├── TerminalUI.ts            # status line, collapsed lines, keys, banner, final summary
-│   ├── intro.ts                 # startup animation + checklist
+│   ├── splash.ts                # full-window startup animation
+│   ├── intro.ts                 # compact header + startup checklist
 │   └── ansi.ts                  # ANSI sequences, boxes, truncation
 ├── scripts/                     # test:telegram, test:amazon
 └── utils/                       # logger (secret redaction, rotation), sleep

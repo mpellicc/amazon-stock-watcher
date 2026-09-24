@@ -1,8 +1,8 @@
 import { ansi, color256 } from "./ansi.js";
 
 /*
- * Startup animation, in two parts: the logo (before the product prompt) and the checklist
- * (after it). Any key skips the animations (all waits become zero).
+ * Compact startup header (logo) and the checklist shown after the product prompt.
+ * The full-window animation lives in splash.ts. Enter skips the checklist effects.
  */
 
 export interface IntroScreen {
@@ -29,11 +29,11 @@ const LETTERS: Record<string, string[]> = {
 };
 
 // From Amazon orange to yellow and back (256-color palette).
-const GRADIENT = [202, 208, 214, 220, 226, 220, 214, 208];
+export const GRADIENT = [202, 208, 214, 220, 226, 220, 214, 208];
 const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const PAD = "  ";
 
-function buildLogo(word: string): string[] {
+export function buildLogo(word: string): string[] {
   const rows: string[] = ["", "", "", "", "", ""];
   for (const ch of word) {
     const letter = LETTERS[ch] ?? [];
@@ -64,41 +64,16 @@ function waiter(screen: IntroScreen): (ms: number) => Promise<void> {
 
 const dimmer = (screen: IntroScreen) => (s: string): string => (screen.colors ? `\x1b[2m${s}\x1b[22m` : s);
 
-/** Clears the screen and draws the animated logo, the subtitle and the parcel scene. */
-export async function playLogo(screen: IntroScreen, subtitle: string): Promise<void> {
-  const wait = waiter(screen);
+/** Clears the screen and draws the compact header: logo, subtitle and parcel line (no animation). */
+export function drawHeader(screen: IntroScreen, subtitle: string): void {
   const dim = dimmer(screen);
-  const logo = buildLogo("STOCK");
-
-  screen.write(ansi.clearScreen + ansi.hideCursor + "\n");
-
-  // 1) Logo written row by row.
-  for (const row of logo) {
-    screen.write(`${PAD}${shade(row, 0, screen.colors)}\n`);
-    await wait(70);
-  }
-  // 2) Gradient sweeping across the logo.
-  for (let frame = 1; frame <= 16 && !screen.isSkipped(); frame++) {
-    screen.write(ansi.up(logo.length));
-    for (const row of logo) screen.write(`${ansi.clearLine}${PAD}${shade(row, frame, screen.colors)}\n`);
-    await wait(45);
-  }
   const bold = (s: string): string => (screen.colors ? `\x1b[1m${s}\x1b[22m` : s);
+  screen.write(ansi.clearScreen + ansi.hideCursor + "\n");
+  for (const row of buildLogo("STOCK")) screen.write(`${PAD}${shade(row, 0, screen.colors)}\n`);
   screen.write(`${PAD}${bold("W  A  T  C  H  E  R")}   ${dim(subtitle)}\n\n`);
-
-  // 3) The parcel crosses the screen, then the radar pulses.
   const track = Math.min(40, Math.max(10, screen.columns - 20));
-  for (let pos = 0; pos <= track && !screen.isSkipped(); pos += 2) {
-    const trail = color256(208, "━".repeat(pos), screen.colors);
-    screen.write(`${ansi.clearLine}${PAD}${trail}📦${dim("·".repeat(track - pos))}`);
-    await wait(28);
-  }
   const trail = color256(208, "━".repeat(track), screen.colors);
-  for (const pulse of ["(·)", "((·))", "(((·)))", "((·))", "(((·)))"]) {
-    screen.write(`${ansi.clearLine}${PAD}${trail}📦 ${color256(214, pulse, screen.colors)}`);
-    await wait(110);
-  }
-  screen.write(`${ansi.clearLine}${PAD}${trail}📦 ${color256(214, "(((·)))", screen.colors)}\n\n`);
+  screen.write(`${PAD}${trail}📦 ${color256(214, "(((·)))", screen.colors)}\n\n`);
 }
 
 /** Checklist tied to real events: each item waits for its promise, with a spinner. */

@@ -1,18 +1,20 @@
 import type { CheckOutcome } from "../amazon/AmazonWatcher.js";
 import type { WatcherState } from "../amazon/types.js";
 import { promptProductUrl } from "../cli.js";
-import { AUTHOR, REPO_URL } from "../meta.js";
+import { AUTHOR, AUTHOR_URL, REPO_URL } from "../meta.js";
 import type { MonitorObserver, SessionStats } from "../Monitor.js";
 import type { TransitionDecision } from "../state/transitions.js";
 import type { ConsoleLine, ConsoleSink } from "../utils/logger.js";
-import { ansi, box, color256, fit, formatDuration, visibleWidth } from "./ansi.js";
-import { playLogo, runChecklist, type ChecklistItem, type IntroScreen } from "./intro.js";
+import { ansi, box, color256, fit, formatDuration, link, visibleWidth } from "./ansi.js";
+import { drawHeader, runChecklist, type ChecklistItem, type IntroScreen } from "./intro.js";
+import { LEAVE_ALT_SCREEN, playSplash, SPLASH_MIN_COLUMNS, SPLASH_MIN_ROWS } from "./splash.js";
 
 /*
  * Interactive UI, enabled only when stdout and stdin are a real terminal.
  * Under pm2/launchd/systemd it is never created: logs stay plain lines.
  *
- * Startup sequence: showLogo() → askProduct() (only without -p) → finishStartup().
+ * Startup sequence: showLogo() (full-window splash, then compact header) → askProduct() (only without -p)
+ * → finishStartup().
  */
 
 export interface KeyHandlers {
@@ -58,6 +60,8 @@ export class TerminalUI implements ConsoleSink, MonitorObserver {
   private lastLineIsCheck = false;
   private introActive = false;
   private introSkipped = false;
+  private splashActive = false;
+  private splashSkipped = false;
   private keys: KeyHandlers | null = null;
   private readonly keyListener = (key: string): void => this.onKey(key);
   private readonly browserReady: Promise<void>;
@@ -80,13 +84,22 @@ export class TerminalUI implements ConsoleSink, MonitorObserver {
 
   // ---------------------------------------------------------------- startup
 
-  /** Clears the screen and shows the logo (instantly when animation is false). */
+  /**
+   * Full-window splash (skipped with Enter; not shown if disabled or the terminal is too small),
+   * then the compact header that stays on screen above the prompt and the logs.
+   */
   async showLogo(animation: boolean): Promise<void> {
     this.enableKeyboard();
-    this.introActive = true;
     if (!animation) this.introSkipped = true;
-    await playLogo(this.screen(), `developed by ${AUTHOR}`);
-    this.introActive = false;
+    if (animation && this.columns >= SPLASH_MIN_COLUMNS && this.rows >= SPLASH_MIN_ROWS) {
+      this.splashActive = true;
+      await playSplash(
+        { ...this.screen(), rows: this.rows, isSkipped: () => this.splashSkipped },
+        { title: "W  A  T  C  H  E  R", credit: `developed by ${AUTHOR}`, hint: "press Enter to skip" },
+      );
+      this.splashActive = false;
+    }
+    drawHeader(this.screen(), `developed by ${this.authorLink()}`);
   }
 
   /** Asks for the product URL below the logo. Keyboard shortcuts are paused meanwhile. */
@@ -115,8 +128,10 @@ export class TerminalUI implements ConsoleSink, MonitorObserver {
     await runChecklist(this.screen(), items);
     this.introActive = false;
 
-    const summary = [...options.summary, "", this.dim(REPO_URL.replace(/^https:\/\//, ""))];
-    this.out.write(`${box(summary, { title: `Amazon Stock Watcher · by ${AUTHOR}`, columns: this.columns, paint: this.accent })}\n\n`);
+    const repoLink = link(REPO_URL.replace(/^https:\/\//, ""), REPO_URL, this.out.isTTY);
+    const summary = [...options.summary, "", this.dim(repoLink)];
+    const title = `Amazon Stock Watcher · by ${this.authorLink()}`;
+    this.out.write(`${box(summary, { title, columns: this.columns, paint: this.accent })}\n\n`);
     this.setTitle("STARTING");
     this.flushBuffer();
     this.startSpinner();
@@ -157,6 +172,7 @@ export class TerminalUI implements ConsoleSink, MonitorObserver {
 
   /** Shutdown during the intro: skip the animations and stop waiting for Chromium. */
   abortIntro(): void {
+    this.splashSkipped = true;
     this.introSkipped = true;
     this.rejectBrowserReady(new Error("interrupted"));
   }
@@ -187,8 +203,16 @@ export class TerminalUI implements ConsoleSink, MonitorObserver {
     return this.out.columns || 80;
   }
 
+  private get rows(): number {
+    return this.out.rows || 24;
+  }
+
   private readonly accent = (s: string): string => color256(208, s, this.colors);
   private readonly dim = (s: string): string => (this.colors ? `\x1b[2m${s}\x1b[22m` : s);
+
+  private authorLink(): string {
+    return link(AUTHOR, AUTHOR_URL, this.out.isTTY);
+  }
 
   private screen(): IntroScreen {
     return {
@@ -340,8 +364,13 @@ export class TerminalUI implements ConsoleSink, MonitorObserver {
       else process.exit(130); // nothing started yet
       return;
     }
+    const enter = key === "\r" || key === "\n";
+    if (this.splashActive) {
+      if (enter) this.splashSkipped = true;
+      return;
+    }
     if (this.introActive) {
-      this.introSkipped = true;
+      if (enter) this.introSkipped = true;
       return;
     }
     if (!this.keys || this.phase === "closing") return;
@@ -367,6 +396,7 @@ export class TerminalUI implements ConsoleSink, MonitorObserver {
 
   private restoreTerminal(): void {
     this.stopSpinner();
+    if (this.splashActive) this.out.write(LEAVE_ALT_SCREEN);
     if (process.stdin.isTTY) {
       try {
         process.stdin.setRawMode(false);

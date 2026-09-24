@@ -44,6 +44,14 @@ export function fit(text: string, columns: number): string {
   return `${out}…\x1b[0m`;
 }
 
+/**
+ * Clickable hyperlink (OSC 8, BEL-terminated): Ctrl/Cmd+click opens the URL in supporting terminals,
+ * the others just show the text. Zero width for visibleWidth/fit, like any ANSI sequence.
+ */
+export function link(text: string, url: string, enabled: boolean): string {
+  return enabled ? `\x1b]8;;${url}\x07${text}\x1b]8;;\x07` : text;
+}
+
 export function color256(code: number, text: string, enabled: boolean): string {
   return enabled ? `\x1b[38;5;${code}m${text}\x1b[39m` : text;
 }
