@@ -379,3 +379,14 @@ journalctl --user -u amazon-stock-watcher -f
 
 This is a personal, non-commercial project. It is not affiliated with, endorsed by or sponsored by Amazon.
 Automated access may conflict with Amazon's Conditions of Use: use it responsibly and at your own risk.
+
+## License
+
+Copyright (C) 2026 [@mpellicc](https://github.com/mpellicc)
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 3 of the License,
+or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
+
+In short: you can use, study, modify and share it, but any distributed version (modified or not)
+must stay under the GPL and come with its source code.

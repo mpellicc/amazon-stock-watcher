@@ -4,6 +4,7 @@
   "private": true,
   "description": "Local Amazon availability watcher with Telegram notifications (no automatic purchases).",
   "author": "mpellicc (https://github.com/mpellicc)",
+  "license": "GPL-3.0-or-later",
   "type": "module",
   "engines": {
     "node": ">=22"
