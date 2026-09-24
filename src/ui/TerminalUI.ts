@@ -106,7 +106,8 @@ export class TerminalUI implements ConsoleSink, MonitorObserver {
   async askProduct(fallback: string): Promise<string> {
     const stdin = process.stdin;
     stdin.off("data", this.keyListener);
-    stdin.setRawMode(false);
+    // Raw mode stays on: readline sets it anyway. Toggling it off and readline toggling it back on
+    // while stdin is reading leaves a stale line read in libuv on Windows, which swallows keys later.
     this.out.write(ansi.showCursor);
     try {
       return await promptProductUrl(fallback, { indent: "  ", label: "? Amazon product URL" });
