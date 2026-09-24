@@ -9,7 +9,7 @@
 ![GitHub Stars](https://img.shields.io/github/stars/mpellicc/amazon-stock-watcher?style=flat)
 
 Un watcher locale che mantiene aperto un vero Chromium (Playwright), controlla una pagina prodotto Amazon a intervalli casuali
-(default 9-14 s) e ti avvisa **subito su Telegram** (più un suono locale e, opzionalmente, l'apertura del browser)
+(predefinito 9-14 s) e ti avvisa **subito su Telegram** (più un suono locale e, opzionalmente, l'apertura del browser)
 quando il prodotto passa da _non acquistabile_ a _acquistabile/preordinabile_. Puoi interrogarlo da remoto con i comandi
 del bot (`/recap`, `/check`) e invia anche un recap periodico.
 
@@ -31,9 +31,9 @@ Il prodotto viene scelto all'avvio (vedi [Scelta del prodotto](#scelta-del-prodo
 
 ## Requisiti
 
-- **Node.js 22+** (tested with Node 24 LTS)
-- **Playwright's Chromium** (`npx playwright install chromium`)
-- A **Telegram bot** and your `chat_id`
+- **Node.js 22+** (testato con Node 24 LTS)
+- **Chromium di Playwright** (`npx playwright install chromium`)
+- Un **bot Telegram** e il tuo `chat_id`
 
 ## Configurazione
 
@@ -43,116 +43,116 @@ cd amazon-stock-watcher
 npm install
 npx playwright install chromium
 cp .env.example .env
-# fill in TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env
-npm run test:telegram   # you should receive "✅ Telegram is configured correctly."
+# compila TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID in .env
+npm run test:telegram   # dovresti ricevere "✅ Telegram is configured correctly."
 ```
 
 ### Creazione del bot Telegram
 
-1. On Telegram open **@BotFather** and send `/newbot`.
-2. Pick a name and a username (it must end in `bot`).
-3. BotFather replies with the **token** (`123456789:AA...`): put it in `TELEGRAM_BOT_TOKEN`.
-4. Open the chat with your new bot and press **Start** / send any message (otherwise the bot cannot write to you).
+1. Su Telegram apri **@BotFather** e invia `/newbot`.
+2. Scegli nome e username (lo username deve finire con `bot`).
+3. BotFather risponde con il **token** (`123456789:AA...`): inseriscilo in `TELEGRAM_BOT_TOKEN`.
+4. Apri la chat con il nuovo bot e premi **Start** / invia un messaggio (altrimenti il bot non può scriverti).
 
 ### Ottenere il `chat_id`
 
-After writing to the bot, open this in a browser (replace the token):
+Dopo aver scritto al bot, apri questo URL nel browser (sostituisci il token):
 
 ```text
 https://api.telegram.org/bot<TOKEN>/getUpdates
 ```
 
-Look for `"chat":{"id":123456789,...}`: that number is the `TELEGRAM_CHAT_ID`.
-Alternatively, write to **@userinfobot**, which replies with your id.
+Cerca `"chat":{"id":123456789,...}`: quel numero è il `TELEGRAM_CHAT_ID`.
+In alternativa, scrivi a **@userinfobot**, che ti risponde con il tuo id.
 
 ## Configurazione (`.env`)
 
-| Variable                                        | Default          | Description                                                                        |
-| ----------------------------------------------- | ---------------- | ---------------------------------------------------------------------------------- |
-| `AMAZON_URL`                                    | —                | Default product, used when there is no `-p` and no terminal to ask in              |
-| `TELEGRAM_BOT_TOKEN`                            | —                | **Required**                                                                       |
-| `TELEGRAM_CHAT_ID`                              | —                | **Required**                                                                       |
-| `MIN_POLL_INTERVAL_MS` / `MAX_POLL_INTERVAL_MS` | `9000` / `14000` | Random wait between checks (minimum 3000)                                          |
-| `HEADLESS`                                      | `true`           | `false` = visible Chromium window                                                  |
-| `LOCAL_SOUND_ENABLED`                           | `true`           | Local sound when the product becomes available                                     |
-| `OPEN_BROWSER_ON_AVAILABLE`                     | `false`          | Opens the URL in the default browser                                               |
-| `TECHNICAL_NOTIFICATION_COOLDOWN_MINUTES`       | `30`             | Minimum gap between two technical alerts                                           |
-| `RECAP_INTERVAL_HOURS`                          | `4`              | Telegram recap every N hours (`0` = disabled). Can be changed live with `/recap N` |
-| `STARTUP_ANIMATION`                             | `true`           | Full-window startup animation in the terminal (Enter skips it)                     |
-| `LOG_LEVEL`                                     | `info`           | `debug` shows the detector signals on every check                                  |
-| `PROBLEM_ALERT_THRESHOLD`                       | `6`              | Consecutive errors before a technical alert (~1 min)                               |
-| `NAVIGATION_TIMEOUT_MS`                         | `30000`          | Navigation timeout                                                                 |
-| `BLOCKED_RETRY_INTERVAL_MS`                     | `120000`         | How often to retry navigation while `BLOCKED`                                      |
-| `BLOCK_HEAVY_RESOURCES`                         | `true`           | Skips images/fonts/video: faster checks                                            |
+| Variabile                                       | Default          | Descrizione                                                                            |
+| ----------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------- |
+| `AMAZON_URL`                                    | —                | Prodotto di default, usato quando non c'è `-p` e non c'è un terminale da cui chiedere |
+| `TELEGRAM_BOT_TOKEN`                            | —                | **Obbligatorio**                                                                       |
+| `TELEGRAM_CHAT_ID`                              | —                | **Obbligatorio**                                                                       |
+| `MIN_POLL_INTERVAL_MS` / `MAX_POLL_INTERVAL_MS` | `9000` / `14000` | Attesa casuale tra i controlli (minimo 3000)                                           |
+| `HEADLESS`                                      | `true`           | `false` = finestra Chromium visibile                                                   |
+| `LOCAL_SOUND_ENABLED`                           | `true`           | Suono locale quando il prodotto diventa disponibile                                    |
+| `OPEN_BROWSER_ON_AVAILABLE`                     | `false`          | Apre l'URL nel browser predefinito                                                     |
+| `TECHNICAL_NOTIFICATION_COOLDOWN_MINUTES`       | `30`             | Intervallo minimo tra due avvisi tecnici                                               |
+| `RECAP_INTERVAL_HOURS`                          | `4`              | Recap Telegram ogni N ore (`0` = disattivato). Modificabile live con `/recap N`       |
+| `STARTUP_ANIMATION`                             | `true`           | Animazione di avvio full-screen nel terminale (Invio la salta)                         |
+| `LOG_LEVEL`                                     | `info`           | `debug` mostra i segnali del detector a ogni controllo                                 |
+| `PROBLEM_ALERT_THRESHOLD`                       | `6`              | Errori consecutivi prima dell'avviso tecnico (~1 min)                                  |
+| `NAVIGATION_TIMEOUT_MS`                         | `30000`          | Timeout di navigazione                                                                  |
+| `BLOCKED_RETRY_INTERVAL_MS`                     | `120000`         | Frequenza dei retry di navigazione in stato `BLOCKED`                                  |
+| `BLOCK_HEAVY_RESOURCES`                         | `true`           | Salta immagini/font/video: controlli più rapidi                                        |
 
-The configuration is validated at startup: if something is missing you get a clear message and the process exits.
+La configurazione viene validata all'avvio: se manca qualcosa ottieni un messaggio chiaro e il processo termina.
 
 ## Esecuzione
 
 ### Scelta del prodotto
 
-In order of precedence:
+Ordine di precedenza:
 
-1. the `-p` / `--product` flag: `npm start -- -p "https://www.amazon.it/dp/B0XXXXXXXX"`;
-2. in a terminal, a prompt right after the logo: Enter confirms the last product used (or `AMAZON_URL`);
-3. `AMAZON_URL` in `.env`: the only option under pm2, launchd or systemd, where there is nobody to ask.
+1. flag `-p` / `--product`: `npm start -- -p "https://www.amazon.it/dp/B0XXXXXXXX"`;
+2. in un terminale, prompt subito dopo il logo: Invio conferma l'ultimo prodotto usato (oppure `AMAZON_URL`);
+3. `AMAZON_URL` in `.env`: unica opzione con pm2, launchd o systemd, dove non c'è nessuno a cui chiedere.
 
-Any Amazon product URL works (with the product name, `ref=`, query parameters…): the ASIN is extracted and the URL normalized to `/dp/<ASIN>`. Short `amzn.eu` links are not supported.
-Each product has its own state (`data/state-<ASIN>.json`), so switching product does not inherit "disarmed" from the previous one.
+Va bene qualsiasi URL prodotto Amazon (con nome prodotto, `ref=`, query parameter...): l'ASIN viene estratto e l'URL normalizzato a `/dp/<ASIN>`. I link corti `amzn.eu` non sono supportati.
+Ogni prodotto ha il suo stato (`data/state-<ASIN>.json`), quindi cambiando prodotto non erediti un eventuale "disarmed" dal precedente.
 
 ### Telegram: recap e comandi
 
-- **Recap** every `RECAP_INTERVAL_HOURS` hours: state, checks in the period, average latency, blocks, network errors, uptime.
-- **Commands** (shown in the bot's `/` menu, answered only for your `TELEGRAM_CHAT_ID`):
-  - `/recap`: immediate recap;
-  - `/recap N`: recap every N hours from now (`0` = off). Lasts until restart;
-  - `/check`: immediate check with its result.
-- Commands sent while the watcher was off are ignored at startup.
-- A bot can only be read by one process: with two watchers on the same bot, commands work on just one of them (the other logs it).
-- To see what is going on when commands do not answer (PC off, crash), use a remote desktop, e.g. Chrome Remote Desktop or RustDesk. It also lets you solve a CAPTCHA while away from home, with `HEADLESS=false`.
+- **Recap** ogni `RECAP_INTERVAL_HOURS` ore: stato, controlli nel periodo, latenza media, blocchi, errori rete, uptime.
+- **Comandi** (visibili nel menu `/` del bot, risponde solo al tuo `TELEGRAM_CHAT_ID`):
+  - `/recap`: recap immediato;
+  - `/recap N`: recap ogni N ore da adesso (`0` = spento). Vale fino al riavvio;
+  - `/check`: controllo immediato con relativo risultato.
+- I comandi inviati mentre il watcher era spento vengono ignorati all'avvio.
+- Un bot può essere letto da un solo processo: con due watcher sullo stesso bot, i comandi funzionano solo su uno dei due (l'altro lo logga).
+- Per capire cosa succede quando i comandi non rispondono (PC spento, crash), usa desktop remoto, ad esempio Chrome Remote Desktop o RustDesk. Ti permette anche di risolvere una CAPTCHA quando sei fuori casa, con `HEADLESS=false`.
 
 ### Script npm
 
-Development (TypeScript directly):
+Sviluppo (TypeScript diretto):
 
 ```bash
 npm run dev
 ```
 
-Production:
+Produzione:
 
 ```bash
 npm run build
 npm start
 ```
 
-Other scripts:
+Altri script:
 
 ```bash
-npm test                # unit tests (detector + state machine), no network
-npm run typecheck       # tsc on sources and tests
-npm run test:telegram   # test message with the "🛒 OPEN ON AMAZON" button
-npm run test:amazon     # a single real check, prints state and signals (-- -p <url> for another product, -- --headed to see the browser)
+npm test                # test unitari (detector + macchina a stati), nessuna rete
+npm run typecheck       # tsc su sorgenti e test
+npm run test:telegram   # messaggio di prova con pulsante "🛒 OPEN ON AMAZON"
+npm run test:amazon     # singolo controllo reale, stampa stato e segnali (-- -p <url> per un altro prodotto, -- --headed per vedere il browser)
 ```
 
 ### Interfaccia terminale
 
-When started from an interactive terminal (`npm run dev`, `npm start`):
+Quando avviato da terminale interattivo (`npm run dev`, `npm start`):
 
-- startup: a full-window splash animation (radar, logo decoding, credits; about 2 s, on the terminal's alternate screen so your scrollback is untouched), then a compact header, the product URL prompt (skipped with `-p`), a checklist tied to real events and a configuration summary. With `-p` the checks start right away, in parallel with the animation. **Enter** skips the animation; `STARTUP_ANIMATION=false` disables it, and it is not shown on terminals smaller than 60×18;
-- status line at the bottom with next check, state, number of checks, uptime and key legend (it shortens on narrow terminals);
-- identical consecutive checks collapsed into a single line (`×42 since 17:41:03`). The log file stays complete;
-- window/tab title showing the state (⚪ UNAVAILABLE, 🟢 AVAILABLE!, 🟣 BLOCKED…);
-- green box and terminal bell when the product becomes available;
-- keys: `c` immediate check (also while BLOCKED, useful after solving a CAPTCHA), `o` opens Amazon, `d` shows/hides the detector details, `q` or Ctrl+C quits with a session summary.
+- avvio: animazione splash full-screen (radar, decoding logo, credits; ~2 s, su schermata alternativa del terminale quindi la scrollback resta intatta), poi header compatto, prompt URL prodotto (saltato con `-p`), checklist legata a eventi reali e riepilogo configurazione. Con `-p` i controlli partono subito, in parallelo all'animazione. **Invio** salta l'animazione; `STARTUP_ANIMATION=false` la disattiva, e non viene mostrata su terminali più piccoli di 60×18;
+- riga di stato in basso con prossimo controllo, stato, numero controlli, uptime e legenda tasti (si accorcia su terminali stretti);
+- controlli consecutivi identici compressi in una sola riga (`×42 since 17:41:03`). Il file log resta completo;
+- titolo finestra/scheda che mostra lo stato (⚪ UNAVAILABLE, 🟢 AVAILABLE!, 🟣 BLOCKED…);
+- box verde e campanella terminale quando il prodotto diventa disponibile;
+- tasti: `c` controllo immediato (anche in BLOCKED, utile dopo aver risolto una CAPTCHA), `o` apre Amazon, `d` mostra/nasconde dettagli detector, `q` o Ctrl+C esce con riepilogo sessione.
 
-Under pm2, launchd, systemd or with output redirected to a file the UI is not enabled: you get plain log lines, with no colors or control sequences.
+Con pm2, launchd, systemd o output reindirizzato su file la UI non si abilita: ottieni righe log semplici, senza colori né sequenze di controllo.
 
 ### Log
 
-Logs go both to the console and to `logs/watcher.log`, in different formats.
+I log vanno sia in console sia in `logs/watcher.log`, con formati diversi.
 
-**Console in an interactive terminal:** time only, colors per state, identical checks collapsed, status line at the bottom.
+**Console in terminale interattivo:** solo orario, colori per stato, controlli identici compressi, riga di stato in basso.
 
 ```text
 09:47:09  Watching https://www.amazon.it/dp/B0F2TN43GH (ASIN B0F2TN43GH) every 9000-14000 ms. Last known state: UNAVAILABLE, armed
@@ -166,13 +166,13 @@ Logs go both to the console and to `logs/watcher.log`, in different formats.
 ⠸ next check 12s · AVAILABLE · #43 · up 9m 23s  │  [c] check now  [o] open Amazon  [d] details  [q] quit
 ```
 
-The check text (e.g. "Non disponibile…") is what Amazon shows on the page, so it follows the language of the Amazon site.
-Lines wider than the terminal are truncated with `…`: the full text is in the file.
-Detector details (`reason=…`) appear only when the state changes, or always with the `d` key or `LOG_LEVEL=debug`.
+Il testo del controllo (es. "Non disponibile…") è quello mostrato da Amazon nella pagina, quindi segue la lingua del sito Amazon.
+Le righe più larghe del terminale vengono troncate con `…`: il testo completo resta nel file.
+I dettagli detector (`reason=…`) compaiono solo quando cambia lo stato, oppure sempre con il tasto `d` o `LOG_LEVEL=debug`.
 
-**Console without a terminal** (pm2, launchd, systemd, redirect): same format, but one line per check, no status line and no colors.
+**Console senza terminale** (pm2, launchd, systemd, redirect): stesso formato, ma una riga per controllo, senza status line e senza colori.
 
-**File `logs/watcher.log`:** full date, one line per check, never collapsed. Rotated at 5 MB, 3 files.
+**File `logs/watcher.log`:** data completa, una riga per controllo, mai compresso. Rotazione a 5 MB, 3 file.
 
 ```text
 2026-09-23 15:30:01 | Amazon Stock Watcher v1.0.0 · developed by @mpellicc · https://github.com/mpellicc/amazon-stock-watcher
@@ -196,114 +196,114 @@ Detector details (`reason=…`) appear only when the state changes, or always wi
 
 ```text
 src/
-├── index.ts                     # wiring, startup sequence, SIGINT/SIGTERM, graceful shutdown
-├── cli.ts                       # -p/--product and the interactive URL prompt
-├── meta.ts                      # name, version, author
-├── Monitor.ts                   # loop: check → transition → notifications → jittered sleep, statistics
-├── config.ts                    # .env + validation, product URL normalization
+├── index.ts                     # wiring, sequenza di avvio, SIGINT/SIGTERM, shutdown pulito
+├── cli.ts                       # -p/--product e prompt URL interattivo
+├── meta.ts                      # nome, versione, autore
+├── Monitor.ts                   # loop: check → transition → notifications → sleep con jitter, statistiche
+├── config.ts                    # .env + validazione, normalizzazione URL prodotto
 ├── amazon/
-│   ├── AmazonWatcher.ts         # persistent Chromium, navigation, crash/restart
-│   ├── availabilityDetector.ts  # HTML → AvailabilityResult (pure function)
+│   ├── AmazonWatcher.ts         # Chromium persistente, navigazione, crash/restart
+│   ├── availabilityDetector.ts  # HTML → AvailabilityResult (funzione pura)
 │   └── types.ts
 ├── state/
-│   ├── transitions.ts           # pure state machine (armed, errors, cooldown)
-│   └── StateManager.ts          # data/state-<ASIN>.json with atomic writes
+│   ├── transitions.ts           # macchina a stati pura (armed, errori, cooldown)
+│   └── StateManager.ts          # data/state-<ASIN>.json con scritture atomiche
 ├── telegram/
-│   ├── TelegramNotifier.ts      # Bot API sendMessage + inline keyboard, retries
+│   ├── TelegramNotifier.ts      # Bot API sendMessage + inline keyboard, retry
 │   └── TelegramCommands.ts      # /recap, /recap N, /check via long polling
 ├── notifications/
-│   ├── LocalNotifier.ts         # sound + browser opening (best-effort)
-│   ├── Recapper.ts              # periodic recap
-│   └── messages.ts              # message texts
+│   ├── LocalNotifier.ts         # suono + apertura browser (best-effort)
+│   ├── Recapper.ts              # recap periodico
+│   └── messages.ts              # testi messaggi
 ├── ui/
-│   ├── TerminalUI.ts            # status line, collapsed lines, keys, banner, final summary
-│   ├── splash.ts                # full-window startup animation
-│   ├── intro.ts                 # compact header + startup checklist
-│   └── ansi.ts                  # ANSI sequences, boxes, truncation
+│   ├── TerminalUI.ts            # status line, righe compresse, tasti, banner, riepilogo finale
+│   ├── splash.ts                # animazione di avvio full-screen
+│   ├── intro.ts                 # header compatto + checklist di avvio
+│   └── ansi.ts                  # sequenze ANSI, box, troncamento
 ├── scripts/                     # test:telegram, test:amazon
-└── utils/                       # logger (secret redaction, rotation), sleep
-test/                            # vitest + HTML fixtures
+└── utils/                       # logger (redazione segreti, rotazione), sleep
+test/                            # vitest + fixture HTML
 ```
 
-The detector receives the **HTML rendered by Chromium** (`page.content()`, i.e. after Amazon's JS has run)
-and parses it with `linkedom`. It is the same function in production and in the tests, which run against local
-fixtures with no browser and no network.
+Il detector riceve l'**HTML renderizzato da Chromium** (`page.content()`, quindi dopo l'esecuzione del JS Amazon)
+e lo analizza con `linkedom`. È la stessa funzione usata in produzione e nei test, che girano su
+fixture locali senza browser e senza rete.
 
 ### `page.goto()` invece di `page.reload()`
 
-Every check performs a **fresh navigation** to the product URL, in the same page and the same Chromium:
+Ogni controllo esegue una **navigazione fresca** all'URL prodotto, nella stessa pagina e nello stesso Chromium:
 
-- if Amazon redirected us to a CAPTCHA or error page, `reload()` would reload _that_ page, while `goto()` always goes back to the product;
-- after a network error the page is on `chrome-error://`, and `goto()` starts clean;
-- the cost is the same: same process, same cache, same cookies.
+- se Amazon ci ha reindirizzato su CAPTCHA o pagina errore, `reload()` ricaricherebbe _quella_ pagina, mentre `goto()` torna sempre al prodotto;
+- dopo un errore rete la pagina è su `chrome-error://`, e `goto()` riparte pulito;
+- il costo è lo stesso: stesso processo, stessa cache, stessi cookie.
 
-The browser uses a **persistent profile** (`data/browser-profile`): cookies and consent survive restarts,
-like for a normal user. It waits for `domcontentloaded`, then up to 10 s for the title or the CAPTCHA, then up to 3 s for the buybox.
+Il browser usa un **profilo persistente** (`data/browser-profile`): cookie e consensi sopravvivono ai riavvii,
+come per un utente normale. Attende `domcontentloaded`, poi fino a 10 s per titolo o CAPTCHA, poi fino a 3 s per la buybox.
 
 ### Classificazione (detector)
 
-Signals collected: the `#add-to-cart-button`, `#buy-now-button`, `submit.preorder` buttons, plus a
-**text fallback limited to the buybox** ("Aggiungi al carrello", "Acquista ora", "Preordina ora", "Add to Cart",
-"Buy Now", "Pre-order"), the `#availability` text, `#productTitle`, the page ASIN and the CAPTCHA signals.
-Text patterns cover both Italian and English Amazon pages.
+Segnali raccolti: bottoni `#add-to-cart-button`, `#buy-now-button`, `submit.preorder`, più un
+**fallback testuale limitato alla buybox** ("Aggiungi al carrello", "Acquista ora", "Preordina ora", "Add to Cart",
+"Buy Now", "Pre-order"), testo `#availability`, `#productTitle`, ASIN pagina e segnali CAPTCHA.
+I pattern testuali coprono sia pagine Amazon italiane sia inglesi.
 
-| Outcome       | When                                                                                                                                                            |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BLOCKED`     | `validateCaptcha` form or `#captchacharacters`; or texts like "Robot Check", "Inserisci i caratteri che vedi", "CAPTCHA"... **on a page with no product title** |
-| `UNKNOWN`     | missing title (incomplete or error page), ASIN different from the expected one, conflicting signals (button + "unavailable"), positive text without buttons     |
-| `AVAILABLE`   | title present, correct ASIN, **at least one visible and enabled purchase/pre-order button**, no negative text                                                   |
-| `UNAVAILABLE` | title present, no active button and negative text ("Attualmente non disponibile", "Currently unavailable"...) or a buybox without buttons                       |
+| Esito         | Quando                                                                                                                                                              |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BLOCKED`     | form `validateCaptcha` o `#captchacharacters`; oppure testi come "Robot Check", "Inserisci i caratteri che vedi", "CAPTCHA"... **su pagina senza titolo prodotto** |
+| `UNKNOWN`     | titolo mancante (pagina incompleta/errore), ASIN diverso da quello atteso, segnali in conflitto (bottone + "unavailable"), testo positivo senza bottoni            |
+| `AVAILABLE`   | titolo presente, ASIN corretto, **almeno un bottone acquisto/preordine visibile e abilitato**, nessun testo negativo                                               |
+| `UNAVAILABLE` | titolo presente, nessun bottone attivo e testo negativo ("Attualmente non disponibile", "Currently unavailable"...) o buybox senza bottoni                         |
 
-Rule: **`AVAILABLE` only with positive evidence**. Anomalous pages, errors and timeouts are never availability.
+Regola: **`AVAILABLE` solo con evidenza positiva**. Pagine anomale, errori e timeout non vengono mai trattati come disponibilità.
 
-Known fragile spots, and how they are handled:
+Punti fragili noti, e come sono gestiti:
 
-- "Add to Cart" also appears in carousels of other products: the text fallback only looks inside the buybox;
-- "disponibile" is contained in "non disponibile": negative text is evaluated first;
-- hidden or disabled buttons (`aok-hidden`, `a-button-disabled`, `disabled`) are ignored;
-- redirect to a variant or bundle: if the ASIN differs the result is `UNKNOWN`;
-- the word "captcha" inside scripts: scripts are removed, and text-only signals count only without a product title;
-- a third-party seller (even at an inflated price) still produces `AVAILABLE`: the seller, when detectable, appears in the log and in the message;
-- if Amazon radically changes its markup the most likely result is `UNKNOWN` (which after a few checks triggers a technical alert), not a false positive.
+- "Add to Cart" compare anche in caroselli di altri prodotti: il fallback testuale cerca solo nella buybox;
+- "disponibile" è contenuto in "non disponibile": il testo negativo viene valutato prima;
+- bottoni nascosti o disabilitati (`aok-hidden`, `a-button-disabled`, `disabled`) vengono ignorati;
+- redirect verso variante o bundle: se l'ASIN differisce il risultato è `UNKNOWN`;
+- la parola "captcha" negli script: gli script vengono rimossi, e i segnali testuali contano solo senza titolo prodotto;
+- un venditore terzo (anche a prezzo alto) produce comunque `AVAILABLE`: il venditore, quando rilevabile, compare in log e messaggio;
+- se Amazon cambia radicalmente il markup, l'esito più probabile è `UNKNOWN` (che dopo qualche check invia avviso tecnico), non un falso positivo.
 
 ### Macchina a stati e notifiche
 
-States: `STARTING`, `UNKNOWN`, `UNAVAILABLE`, `AVAILABLE`, `BLOCKED`, `NETWORK_ERROR`.
+Stati: `STARTING`, `UNKNOWN`, `UNAVAILABLE`, `AVAILABLE`, `BLOCKED`, `NETWORK_ERROR`.
 
-- **Availability**: the watcher starts **armed**. On the first `AVAILABLE` it sends Telegram (with the **🛒 OPEN ON AMAZON** button), plays the sound and opens the browser if enabled, then becomes **disarmed**. It is armed again only when it sees `UNAVAILABLE`. The state is shown at startup and in recaps. So:
-  - `UNAVAILABLE → AVAILABLE`: notification;
-  - `AVAILABLE → AVAILABLE`: nothing;
-  - `AVAILABLE → NETWORK_ERROR → AVAILABLE`: nothing (not a new availability);
-  - `AVAILABLE → UNAVAILABLE → AVAILABLE`: new notification;
-  - if Telegram does not answer, the watcher stays armed and retries on the next check.
-- **Persistence**: `data/state-<ASIN>.json` (atomic write: temp file + `rename`) keeps the last state, timestamps and the armed flag. After a restart it does not re-notify an availability that was already notified.
-- **Technical alerts** (policy):
-  - `BLOCKED`: one Telegram message immediately, only once per episode;
-  - `NETWORK_ERROR` / `UNKNOWN`: log only for the first errors; at `PROBLEM_ALERT_THRESHOLD` consecutive ones (default 6, about 1 minute) one Telegram message per episode;
-  - at least `TECHNICAL_NOTIFICATION_COOLDOWN_MINUTES` between two technical alerts;
-  - back to normal: a log line and, if an alert was sent, a "✅ back to normal" message.
-- **Adaptive slowdown**: every new `BLOCKED` episode doubles the polling interval (up to 8x). After 30 minutes without new blocks the interval is halved, one step at a time, until it is back to normal. Every change is logged. The factor lives in memory: a restart resets it.
-- **While `BLOCKED`** the watcher does not reload on every round. It re-reads the current page (with `HEADLESS=false` you can solve the verification yourself in the Chromium window) and navigates again only every `BLOCKED_RETRY_INTERVAL_MS`.
+- **Disponibilità**: il watcher parte **armed**. Al primo `AVAILABLE` invia Telegram (con pulsante **🛒 OPEN ON AMAZON**), riproduce il suono e apre il browser se abilitato, poi diventa **disarmed**. Torna armed solo quando vede `UNAVAILABLE`. Lo stato viene mostrato all'avvio e nei recap. Quindi:
+  - `UNAVAILABLE → AVAILABLE`: notifica;
+  - `AVAILABLE → AVAILABLE`: niente;
+  - `AVAILABLE → NETWORK_ERROR → AVAILABLE`: niente (non è una nuova disponibilità);
+  - `AVAILABLE → UNAVAILABLE → AVAILABLE`: nuova notifica;
+  - se Telegram non risponde, il watcher resta armed e ritenta al check successivo.
+- **Persistenza**: `data/state-<ASIN>.json` (scrittura atomica: file temporaneo + `rename`) mantiene ultimo stato, timestamp e flag armed. Dopo un riavvio non rinotifica una disponibilità già notificata.
+- **Avvisi tecnici** (policy):
+  - `BLOCKED`: un messaggio Telegram immediato, una sola volta per episodio;
+  - `NETWORK_ERROR` / `UNKNOWN`: solo log per i primi errori; a `PROBLEM_ALERT_THRESHOLD` errori consecutivi (default 6, ~1 minuto) un messaggio Telegram per episodio;
+  - almeno `TECHNICAL_NOTIFICATION_COOLDOWN_MINUTES` tra due avvisi tecnici;
+  - ritorno alla normalità: riga di log e, se era stato inviato un avviso, messaggio "✅ back to normal".
+- **Rallentamento adattivo**: ogni nuovo episodio `BLOCKED` raddoppia l'intervallo di polling (fino a 8x). Dopo 30 minuti senza nuovi blocchi l'intervallo viene dimezzato, un livello alla volta, fino al valore normale. Ogni variazione viene loggata. Il fattore vive in memoria: riavviando si resetta.
+- **Durante `BLOCKED`** il watcher non ricarica a ogni giro. Rilegge la pagina corrente (con `HEADLESS=false` puoi risolvere la verifica a mano nella finestra Chromium) e naviga di nuovo solo ogni `BLOCKED_RETRY_INTERVAL_MS`.
 
 ### Robustezza
 
-- Timeouts, `ERR_CONNECTION_RESET`, DNS and navigation failures become `NETWORK_ERROR` and the loop keeps going.
-- Page or browser crash, or context closed: Chromium is recreated with exponential backoff (2 s → 2 min).
-- Telegram unreachable: 3 attempts with backoff (honors `retry_after`), then it moves on. Command polling retries on its own with backoff (5 s → 60 s).
-- Sound and browser opening are best-effort: errors end up in the log and are ignored.
-- `SIGINT`/`SIGTERM` (or `q`/Ctrl+C in the UI): the loop stops, Chromium is closed gracefully, exit 0. A second signal arriving within 2 s is ignored (under `npm` Ctrl+C arrives twice); a later one forces the exit.
-- The Telegram token is never logged: the logger masks anything shaped like a token.
+- Timeout, `ERR_CONNECTION_RESET`, DNS e fallimenti di navigazione diventano `NETWORK_ERROR` e il loop continua.
+- Crash pagina/browser, o context chiuso: Chromium viene ricreato con backoff esponenziale (2 s → 2 min).
+- Telegram non raggiungibile: 3 tentativi con backoff (rispetta `retry_after`), poi prosegue. Il polling comandi ritenta autonomamente con backoff (5 s → 60 s).
+- Suono e apertura browser sono best-effort: gli errori finiscono nei log e vengono ignorati.
+- `SIGINT`/`SIGTERM` (oppure `q`/Ctrl+C nella UI): il loop si ferma, Chromium viene chiuso in modo pulito, uscita 0. Un secondo segnale entro 2 s viene ignorato (sotto `npm` Ctrl+C arriva due volte); un segnale successivo forza l'uscita.
+- Il token Telegram non viene mai loggato: il logger maschera qualsiasi stringa che sembri un token.
 
 ---
 
 ## Avvio automatico con il PC
 
-Run `npm run build` first. In the commands below replace `/path/to/amazon-stock-watcher` with the real path.
+Esegui prima `npm run build`. Nei comandi sotto sostituisci `/path/to/amazon-stock-watcher` con il percorso reale.
 
-When started as a service there is no terminal: the URL prompt and the interactive UI do not appear. The product must be given
-with `AMAZON_URL` in `.env` or with `-p <url>` in the arguments (in the examples below: `-p https://www.amazon.it/dp/B0XXXXXXXX`).
+Quando avviato come servizio non c'è terminale: prompt URL e UI interattiva non compaiono. Il prodotto deve essere fornito
+con `AMAZON_URL` in `.env` oppure con `-p <url>` negli argomenti (negli esempi sotto: `-p https://www.amazon.it/dp/B0XXXXXXXX`).
 
-### Windows: PM2 (simplest)
+### Windows: PM2 (più semplice)
 
 ```powershell
 npm install -g pm2 pm2-windows-startup
@@ -313,15 +313,15 @@ pm2 save
 pm2-startup install
 ```
 
-`pm2 logs amazon-watcher` shows the logs, `pm2 restart amazon-watcher` restarts it.
+`pm2 logs amazon-watcher` mostra i log, `pm2 restart amazon-watcher` lo riavvia.
 
-### Windows: Task Scheduler
+### Windows: Utilità di pianificazione
 
 1. _Task Scheduler_ → **Create Task**.
-2. _General_: "Run only when user is logged on" (needed for sound and browser opening).
+2. _General_: "Run only when user is logged on" (necessario per suono e apertura browser).
 3. _Triggers_: **At log on**.
-4. _Actions_: program `C:\Program Files\nodejs\node.exe`, arguments `dist\index.js -p https://www.amazon.it/dp/B0XXXXXXXX`, _Start in_ `C:\path\to\amazon-stock-watcher`.
-5. _Settings_: "If the task fails, restart every 1 minute" and untick "Stop the task if it runs longer than...".
+4. _Actions_: programma `C:\Program Files\nodejs\node.exe`, argomenti `dist\index.js -p https://www.amazon.it/dp/B0XXXXXXXX`, _Start in_ `C:\path\to\amazon-stock-watcher`.
+5. _Settings_: "If the task fails, restart every 1 minute" e togli la spunta da "Stop the task if it runs longer than...".
 
 ### macOS: launchd
 
@@ -353,9 +353,9 @@ pm2-startup install
 launchctl load ~/Library/LaunchAgents/com.mpellicc.amazon-stock-watcher.plist
 ```
 
-To stop it: `launchctl unload ...`. Keep the Mac awake (Settings → Battery/Energy, or `caffeinate -s`).
+Per fermarlo: `launchctl unload ...`. Mantieni il Mac attivo (Impostazioni → Batteria/Energia, oppure `caffeinate -s`).
 
-### Linux: systemd (user)
+### Linux: systemd (utente)
 
 `~/.config/systemd/user/amazon-stock-watcher.service`:
 
@@ -378,7 +378,7 @@ WantedBy=default.target
 ```bash
 systemctl --user daemon-reload
 systemctl --user enable --now amazon-stock-watcher
-loginctl enable-linger $USER    # starts even without logging in
+loginctl enable-linger $USER    # parte anche senza login
 journalctl --user -u amazon-stock-watcher -f
 ```
 
@@ -386,30 +386,30 @@ journalctl --user -u amazon-stock-watcher -f
 
 ## Sicurezza
 
-- `.env`, `data/` and `logs/` are in `.gitignore`: never commit secrets.
-- The code does not log in to Amazon, does not add to cart, does not check out, does not solve or bypass CAPTCHAs, and does not use stealth plugins, proxies or fingerprint spoofing.
-- Jittered polling (default 9-14 s) with automatic slowdown when Amazon asks for verifications: a user reloading the page, not a crawler.
-- Telegram commands are answered only for the configured `TELEGRAM_CHAT_ID`; messages from other chats are ignored.
+- `.env`, `data/` e `logs/` sono in `.gitignore`: non committare mai segreti.
+- Il codice non effettua login Amazon, non aggiunge al carrello, non fa checkout, non risolve né bypassa CAPTCHA, e non usa plugin stealth, proxy o fingerprint spoofing.
+- Polling con jitter (default 9-14 s) e rallentamento automatico quando Amazon richiede verifiche: comportamento simile a un utente che ricarica la pagina, non a un crawler.
+- I comandi Telegram vengono gestiti solo per il `TELEGRAM_CHAT_ID` configurato; i messaggi da altre chat vengono ignorati.
 
 ## Note legali
 
-This is a personal, non-commercial project made for educational purposes. It is not affiliated with,
-endorsed by or sponsored by Amazon. "Amazon" is a trademark of Amazon.com, Inc. or its affiliates,
-used here only to describe what the tool monitors.
+Questo è un progetto personale, non commerciale, realizzato per scopi educativi. Non è affiliato,
+approvato o sponsorizzato da Amazon. "Amazon" è un marchio di Amazon.com, Inc. o delle sue affiliate,
+usato qui solo per descrivere cosa monitora lo strumento.
 
-Automated access may conflict with Amazon's Conditions of Use. You are solely responsible for how you use
-this tool and for complying with Amazon's terms and the laws that apply to you.
+L'accesso automatizzato può entrare in conflitto con le Condizioni d'Uso di Amazon. Sei l'unico responsabile
+dell'utilizzo di questo tool e del rispetto dei termini Amazon e delle leggi applicabili.
 
-The software is provided "as is", without warranty of any kind (see [LICENSE](LICENSE)): it may miss an
-availability window, be blocked by Amazon, or stop working if Amazon changes its pages.
+Il software è fornito "così com'è", senza alcuna garanzia (vedi [LICENSE](LICENSE)): può perdere una
+finestra di disponibilità, essere bloccato da Amazon, o smettere di funzionare se Amazon modifica le sue pagine.
 
 ## Licenza
 
 Copyright (C) 2026 [@mpellicc](https://github.com/mpellicc)
 
-This program is free software: you can redistribute it and/or modify it under the terms of the
-GNU General Public License as published by the Free Software Foundation, either version 3 of the License,
-or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
+Questo programma è software libero: puoi ridistribuirlo e/o modificarlo secondo i termini della
+GNU General Public License pubblicata dalla Free Software Foundation, versione 3 della Licenza,
+o (a tua scelta) qualsiasi versione successiva. Vedi [LICENSE](LICENSE) per il testo completo.
 
-In short: you can use, study, modify and share it, but any distributed version (modified or not)
-must stay under the GPL and come with its source code.
+In breve: puoi usare, studiare, modificare e condividere il progetto, ma qualsiasi versione distribuita
+(modificata o meno) deve restare sotto GPL e includere il codice sorgente.
