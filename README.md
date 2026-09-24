@@ -1,9 +1,25 @@
 # amazon-stock-watcher
 
+🇬🇧 **English** | 🇮🇹 [Italiano](README.it.md)
+
+![TypeScript](https://img.shields.io/badge/language-TypeScript-3178c6?logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/node-%3E%3D22-43853d?logo=node.js&logoColor=white)
+![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)
+![Last Commit](https://img.shields.io/github/last-commit/mpellicc/amazon-stock-watcher)
+![GitHub Stars](https://img.shields.io/github/stars/mpellicc/amazon-stock-watcher?style=flat)
+
 A local watcher that keeps a real Chromium open (Playwright), checks an Amazon product page at random intervals
 (default 9-14 s) and alerts you **immediately on Telegram** (plus a local sound and, optionally, opening the browser)
 when the product goes from _not purchasable_ to _purchasable/pre-orderable_. You can query it remotely with bot
 commands (`/recap`, `/check`) and it sends a periodic recap.
+
+> [!TIP]
+> Quick start:
+> 1. `npm install`
+> 2. `npx playwright install chromium`
+> 3. `cp .env.example .env` and set Telegram values
+> 4. `npm run test:telegram`
+> 5. `npm run dev` (or `npm run build && npm start`)
 
 > [!IMPORTANT]
 > **It never buys anything.** No login, cart, checkout or automatic purchase.
