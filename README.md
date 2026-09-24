@@ -54,7 +54,7 @@ Alternatively, write to **@userinfobot**, which replies with your id.
 
 | Variable                                        | Default          | Description                                                                        |
 | ----------------------------------------------- | ---------------- | ---------------------------------------------------------------------------------- |
-| `AMAZON_URL`                                    | —                | Default product, used when there is no `-p` and no terminal to ask in               |
+| `AMAZON_URL`                                    | —                | Default product, used when there is no `-p` and no terminal to ask in              |
 | `TELEGRAM_BOT_TOKEN`                            | —                | **Required**                                                                       |
 | `TELEGRAM_CHAT_ID`                              | —                | **Required**                                                                       |
 | `MIN_POLL_INTERVAL_MS` / `MAX_POLL_INTERVAL_MS` | `9000` / `14000` | Random wait between checks (minimum 3000)                                          |
@@ -231,12 +231,12 @@ Signals collected: the `#add-to-cart-button`, `#buy-now-button`, `submit.preorde
 "Buy Now", "Pre-order"), the `#availability` text, `#productTitle`, the page ASIN and the CAPTCHA signals.
 Text patterns cover both Italian and English Amazon pages.
 
-| Outcome       | When                                                                                                                                                    |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Outcome       | When                                                                                                                                                            |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `BLOCKED`     | `validateCaptcha` form or `#captchacharacters`; or texts like "Robot Check", "Inserisci i caratteri che vedi", "CAPTCHA"... **on a page with no product title** |
-| `UNKNOWN`     | missing title (incomplete or error page), ASIN different from the expected one, conflicting signals (button + "unavailable"), positive text without buttons |
-| `AVAILABLE`   | title present, correct ASIN, **at least one visible and enabled purchase/pre-order button**, no negative text                                          |
-| `UNAVAILABLE` | title present, no active button and negative text ("Attualmente non disponibile", "Currently unavailable"...) or a buybox without buttons                 |
+| `UNKNOWN`     | missing title (incomplete or error page), ASIN different from the expected one, conflicting signals (button + "unavailable"), positive text without buttons     |
+| `AVAILABLE`   | title present, correct ASIN, **at least one visible and enabled purchase/pre-order button**, no negative text                                                   |
+| `UNAVAILABLE` | title present, no active button and negative text ("Attualmente non disponibile", "Currently unavailable"...) or a buybox without buttons                       |
 
 Rule: **`AVAILABLE` only with positive evidence**. Anomalous pages, errors and timeouts are never availability.
 
@@ -377,8 +377,15 @@ journalctl --user -u amazon-stock-watcher -f
 
 ## Disclaimer
 
-This is a personal, non-commercial project. It is not affiliated with, endorsed by or sponsored by Amazon.
-Automated access may conflict with Amazon's Conditions of Use: use it responsibly and at your own risk.
+This is a personal, non-commercial project made for educational purposes. It is not affiliated with,
+endorsed by or sponsored by Amazon. "Amazon" is a trademark of Amazon.com, Inc. or its affiliates,
+used here only to describe what the tool monitors.
+
+Automated access may conflict with Amazon's Conditions of Use. You are solely responsible for how you use
+this tool and for complying with Amazon's terms and the laws that apply to you.
+
+The software is provided "as is", without warranty of any kind (see [LICENSE](LICENSE)): it may miss an
+availability window, be blocked by Amazon, or stop working if Amazon changes its pages.
 
 ## License
 
