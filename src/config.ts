@@ -1,5 +1,8 @@
-import "dotenv/config";
+import dotenv from "dotenv";
 import type { LogLevel } from "./utils/logger.js";
+
+// quiet: dotenv 17+ altrimenti stampa un messaggio a ogni avvio.
+dotenv.config({ quiet: true });
 
 export interface TelegramConfig {
   botToken: string;
@@ -21,6 +24,7 @@ export interface Config {
   blockedRetryIntervalMs: number;
   blockHeavyResources: boolean;
   startupAnimation: boolean;
+  recapIntervalHours: number;
   logLevel: LogLevel;
   paths: { stateFile: string; logFile: string; browserProfileDir: string };
 }
@@ -34,7 +38,13 @@ export class ConfigError extends Error {
 
 type Env = Record<string, string | undefined>;
 
-export function loadConfig(options: { requireTelegram: boolean }, env: Env = process.env): Config {
+export interface LoadOptions {
+  requireTelegram: boolean;
+  /** URL già scelto (flag -p o richiesta interattiva): ha la precedenza su AMAZON_URL. */
+  productUrl?: string;
+}
+
+export function loadConfig(options: LoadOptions, env: Env = process.env): Config {
   const problems: string[] = [];
   const str = (key: string): string => (env[key] ?? "").trim();
 
@@ -58,12 +68,10 @@ export function loadConfig(options: { requireTelegram: boolean }, env: Env = pro
     return def;
   };
 
-  const amazonUrl = str("AMAZON_URL") || "https://www.amazon.it/dp/B0F2TN43GH";
-  const asin = extractAsin(amazonUrl);
-  if (!/^https:\/\/(www\.)?amazon\.[a-z.]+\//.test(amazonUrl)) {
-    problems.push(`AMAZON_URL deve essere un URL https di Amazon (valore attuale: "${amazonUrl}")`);
-  }
-  if (!asin) problems.push(`AMAZON_URL non contiene un ASIN riconoscibile (/dp/XXXXXXXXXX)`);
+  const rawUrl = options.productUrl ?? str("AMAZON_URL");
+  const product = parseProductUrl(rawUrl);
+  if (!rawUrl) problems.push("Nessun prodotto: passa -p <url> oppure imposta AMAZON_URL nel .env");
+  else if (!product) problems.push(`URL prodotto non valido: "${rawUrl}" (serve un URL https di Amazon con /dp/ASIN)`);
 
   const botToken = str("TELEGRAM_BOT_TOKEN");
   const chatId = str("TELEGRAM_CHAT_ID");
@@ -83,9 +91,10 @@ export function loadConfig(options: { requireTelegram: boolean }, env: Env = pro
     problems.push(`LOG_LEVEL deve essere debug|info|warn|error (valore attuale: "${logLevel}")`);
   }
 
+  const asin = product?.asin ?? "";
   const config: Config = {
-    amazonUrl,
-    asin: asin ?? "",
+    amazonUrl: product?.url ?? "",
+    asin,
     telegram: botToken && chatId ? { botToken, chatId } : null,
     minPollIntervalMs: minPoll,
     maxPollIntervalMs: maxPoll,
@@ -98,9 +107,11 @@ export function loadConfig(options: { requireTelegram: boolean }, env: Env = pro
     blockedRetryIntervalMs: int("BLOCKED_RETRY_INTERVAL_MS", 120_000, 10_000),
     blockHeavyResources: bool("BLOCK_HEAVY_RESOURCES", true),
     startupAnimation: bool("STARTUP_ANIMATION", true),
+    recapIntervalHours: int("RECAP_INTERVAL_HOURS", 4, 0),
     logLevel: logLevel as LogLevel,
     paths: {
-      stateFile: "data/state.json",
+      // Uno stato per prodotto: cambiando prodotto non si eredita "disarmed" dal precedente.
+      stateFile: `data/state-${asin || "unknown"}.json`,
       logFile: "logs/watcher.log",
       browserProfileDir: "data/browser-profile",
     },
@@ -113,4 +124,20 @@ export function loadConfig(options: { requireTelegram: boolean }, env: Env = pro
 export function extractAsin(url: string): string | null {
   const match = /\/(?:dp|gp\/product)\/([A-Z0-9]{10})(?:[/?#]|$)/i.exec(url);
   return match?.[1]?.toUpperCase() ?? null;
+}
+
+/**
+ * Accetta qualunque URL prodotto Amazon (anche con slug o parametri) e lo normalizza
+ * in https://<dominio>/dp/<ASIN>. null se non è un URL Amazon con ASIN.
+ */
+export function parseProductUrl(input: string): { url: string; asin: string } | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(input.trim());
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "https:" || !/^(www\.)?amazon\.[a-z.]+$/.test(parsed.hostname)) return null;
+  const asin = extractAsin(parsed.pathname);
+  return asin ? { url: `https://${parsed.hostname}/dp/${asin}`, asin } : null;
 }

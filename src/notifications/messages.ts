@@ -1,5 +1,7 @@
-import type { AvailabilityResult } from "../amazon/types.js";
+import type { AvailabilityResult, WatcherState } from "../amazon/types.js";
+import type { SessionStats } from "../Monitor.js";
 import type { ProblemState } from "../state/transitions.js";
+import { formatDuration } from "../ui/ansi.js";
 
 const HEADER = "Amazon Stock Watcher";
 
@@ -39,4 +41,37 @@ export function recoveredMessage(): string {
 
 export function telegramTestMessage(): string {
   return `✅ ${HEADER}\n\nTelegram configurato correttamente.`;
+}
+
+export interface RecapData {
+  now: Date;
+  periodStartedAt: number;
+  period: SessionStats;
+  session: SessionStats;
+  title?: string;
+  state: WatcherState;
+  armed: boolean;
+  lastCheckAt?: Date;
+  /** null = recap periodico disattivato. */
+  nextRecapAt: Date | null;
+}
+
+export function recapMessage(d: RecapData): string {
+  const avg = d.period.checks > 0 ? `${(d.period.totalCheckMs / d.period.checks / 1000).toFixed(1).replace(".", ",")} s` : "-";
+  const lines = [
+    `📊 ${HEADER} · recap ultime ${formatDuration(d.now.getTime() - d.periodStartedAt)}`,
+    "",
+    `🎮 ${d.title ?? "Prodotto monitorato"}`,
+    `📦 Stato: ${d.state} (${d.armed ? "armed" : "disarmed"})`,
+    `🔎 Check: ${d.period.checks.toLocaleString("it-IT")} · media ${avg}`,
+    `🧱 Blocchi CAPTCHA: ${d.period.blockedEpisodes} · errori di rete: ${d.period.networkErrors}`,
+  ];
+  if (d.period.availableEpisodes > 0) lines.push(`🚨 Disponibilità rilevate: ${d.period.availableEpisodes}`);
+  lines.push(
+    `⏱ Attivo da: ${formatDuration(d.now.getTime() - d.session.startedAt)}`,
+    `🕒 Ultimo check: ${d.lastCheckAt ? formatTime(d.lastCheckAt) : "-"}`,
+    "",
+    d.nextRecapAt ? `Prossimo recap alle ${formatTime(d.nextRecapAt).slice(0, 5)}` : "Recap periodico disattivato",
+  );
+  return lines.join("\n");
 }

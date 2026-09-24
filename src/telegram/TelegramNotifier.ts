@@ -10,10 +10,17 @@ interface InlineButton {
   url: string;
 }
 
-interface TelegramResponse {
+export interface TelegramResponse<T = unknown> {
   ok: boolean;
+  result?: T;
   description?: string;
+  error_code?: number;
   parameters?: { retry_after?: number };
+}
+
+export interface TelegramUpdate {
+  update_id: number;
+  message?: { text?: string; chat: { id: number; username?: string } };
 }
 
 export class TelegramNotifier {
@@ -22,6 +29,10 @@ export class TelegramNotifier {
     private readonly productUrl: string,
   ) {}
 
+  get chatId(): string {
+    return this.config.chatId;
+  }
+
   /** Messaggio con il bottone "🛒 APRI SU AMAZON". Restituisce true se consegnato. */
   sendWithAmazonButton(text: string): Promise<boolean> {
     return this.send(text, { text: "🛒 APRI SU AMAZON", url: this.productUrl });
@@ -29,6 +40,22 @@ export class TelegramNotifier {
 
   sendPlain(text: string): Promise<boolean> {
     return this.send(text);
+  }
+
+  /**
+   * Chiamata grezza alla Bot API. Lancia solo su errori di rete/timeout.
+   * L'URL contiene il token: non va mai loggato né incluso negli errori.
+   */
+  async call<T>(method: string, body: object, timeoutMs = REQUEST_TIMEOUT_MS, signal?: AbortSignal): Promise<{ status: number; data: TelegramResponse<T> }> {
+    const timeout = AbortSignal.timeout(timeoutMs);
+    const res = await fetch(`https://api.telegram.org/bot${this.config.botToken}/${method}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    });
+    const data = (await res.json().catch(() => ({ ok: false }))) as TelegramResponse<T>;
+    return { status: res.status, data };
   }
 
   private async send(text: string, button?: InlineButton): Promise<boolean> {
@@ -41,19 +68,12 @@ export class TelegramNotifier {
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
-        // L'URL contiene il token: non va mai loggato né incluso negli errori.
-        const res = await fetch(`https://api.telegram.org/bot${this.config.botToken}/sendMessage`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
-          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        });
-        const data = (await res.json().catch(() => ({ ok: false }))) as TelegramResponse;
-        if (res.ok && data.ok) return true;
+        const { status, data } = await this.call("sendMessage", body);
+        if (status === 200 && data.ok) return true;
 
-        logger.warn(`Telegram ha risposto ${res.status}: ${data.description ?? "errore sconosciuto"} (tentativo ${attempt})`);
+        logger.warn(`Telegram ha risposto ${status}: ${data.description ?? "errore sconosciuto"} (tentativo ${attempt})`);
         // Errori di configurazione (token/chat errati): inutile riprovare.
-        if (res.status === 400 || res.status === 401 || res.status === 403 || res.status === 404) return false;
+        if (status === 400 || status === 401 || status === 403 || status === 404) return false;
         const retryAfterMs = (data.parameters?.retry_after ?? 0) * 1000;
         if (attempt < MAX_ATTEMPTS) await sleep(Math.max(retryAfterMs, 1000 * attempt));
       } catch (err) {

@@ -21,6 +21,7 @@ export interface SessionStats {
   checks: number;
   totalCheckMs: number;
   blockedEpisodes: number;
+  networkErrors: number;
   availableEpisodes: number;
   notificationsSent: number;
 }
@@ -44,7 +45,7 @@ export interface MonitorDeps {
 }
 
 export function createSessionStats(): SessionStats {
-  return { startedAt: Date.now(), checks: 0, totalCheckMs: 0, blockedEpisodes: 0, availableEpisodes: 0, notificationsSent: 0 };
+  return { startedAt: Date.now(), checks: 0, totalCheckMs: 0, blockedEpisodes: 0, networkErrors: 0, availableEpisodes: 0, notificationsSent: 0 };
 }
 
 /** Loop principale: check → transizione di stato → notifiche → attesa con jitter. */
@@ -57,6 +58,10 @@ export class Monitor {
   private lastSlowdownChangeAt = 0;
   private wake: AbortController | null = null;
   private forceNavigation = false;
+  private checkWaiters: Array<(outcome: CheckOutcome) => void> = [];
+  /** Ultimo titolo letto dalla pagina (per recap e risposte ai comandi). */
+  productTitle: string | undefined;
+  lastOutcome: { outcome: CheckOutcome; at: Date } | null = null;
   readonly stats: SessionStats;
 
   constructor(private readonly deps: MonitorDeps) {
@@ -93,6 +98,18 @@ export class Monitor {
   requestCheckNow(): void {
     this.forceNavigation = true;
     this.wake?.abort();
+  }
+
+  /** Come requestCheckNow, ma attende l'esito (null se non arriva entro timeoutMs). */
+  checkNow(timeoutMs = 90_000): Promise<CheckOutcome | null> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(null), timeoutMs);
+      this.checkWaiters.push((outcome) => {
+        clearTimeout(timer);
+        resolve(outcome);
+      });
+      this.requestCheckNow();
+    });
   }
 
   /** Avvia/ricrea Chromium con backoff esponenziale. false = riprovare al giro successivo. */
@@ -147,6 +164,14 @@ export class Monitor {
     this.adjustSlowdown(outcome.state, decision.changed, now.getTime());
     this.updateStats(outcome, decision);
     this.deps.observer?.onCheckDone?.(outcome, decision);
+    if (outcome.result?.title) this.productTitle = outcome.result.title;
+    this.lastOutcome = { outcome, at: now };
+    // Solo i check reali (durationMs > 0) soddisfano chi ha chiesto /check.
+    if (outcome.durationMs > 0) {
+      const waiters = this.checkWaiters;
+      this.checkWaiters = [];
+      for (const resolve of waiters) resolve(outcome);
+    }
 
     if (outcome.state === "UNAVAILABLE") this.localAlertDone = false;
     if (decision.notifyAvailable) await this.notifyAvailable(outcome, now);
@@ -166,6 +191,7 @@ export class Monitor {
       this.stats.totalCheckMs += outcome.durationMs;
     }
     if (d.changed && outcome.state === "BLOCKED") this.stats.blockedEpisodes++;
+    if (outcome.state === "NETWORK_ERROR") this.stats.networkErrors++;
     if (d.changed && outcome.state === "AVAILABLE") this.stats.availableEpisodes++;
   }
 

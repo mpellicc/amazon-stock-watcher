@@ -1,13 +1,14 @@
 /**
  * Singolo controllo della pagina reale, senza notifiche né modifica dello stato.
- * Utile per verificare la detection: npm run test:amazon (aggiungi --headed per vedere il browser).
+ * Utile per verificare la detection: npm run test:amazon (-- -p <url> per un altro prodotto, -- --headed per vedere il browser).
  */
 import { AmazonWatcher } from "../amazon/AmazonWatcher.js";
 import { explainResult } from "../amazon/availabilityDetector.js";
+import { resolveProductUrl } from "../cli.js";
 import { ConfigError, loadConfig } from "../config.js";
 
 try {
-  const config = loadConfig({ requireTelegram: false });
+  const config = loadConfig({ requireTelegram: false, productUrl: await resolveProductUrl() });
   const watcher = new AmazonWatcher({
     url: config.amazonUrl,
     asin: config.asin,
